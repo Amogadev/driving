@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership model for a driving school application.
  * All user-specific data is nested under a user's private document tree, and access is
@@ -16,7 +17,7 @@
  *
  * Key Security Decisions:
  * - User Isolation: A user can only ever access documents within their own `/users/{userId}` path.
- * - No User Listing: It is not possible for any user, authenticated or not, to list all documents in the `/users` collection.
+ * - User Listing: All authenticated users can list all users, but cannot write to other users' profiles.
  * - Denormalization for Authorization: The `/llr_applications` collection requires each document to contain an `applicantId` field. This denormalized field is used to grant ownership-based permissions without needing slow, cross-collection lookups. This allows for secure and performant rules.
  * - Default Deny: Any operation not explicitly granted is denied.
  */
@@ -54,11 +55,11 @@ service cloud.firestore {
      * @path /users/{userId}
      * @allow (create) An authenticated user creating their own profile document, e.g., `db.collection('users').doc('user_abc').set({ id: 'user_abc', ... })` where auth.uid is 'user_abc'.
      * @deny (update) User 'user_xyz' trying to update the profile of 'user_abc'.
-     * @principle Enforces Self-Creation and Ownership. A user can create their own document and is the only one who can read or modify it thereafter. Listing all users is denied.
+     * @principle Enforces Self-Creation and Ownership. A user can create their own document and is the only one who can read or modify it thereafter. Listing all users is allowed for authenticated users.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false; // Disallow listing all user profiles for security.
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);

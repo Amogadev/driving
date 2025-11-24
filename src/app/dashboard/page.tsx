@@ -104,7 +104,7 @@ export default function DashboardPage() {
               </DialogContent>
             </Dialog>
             
-            <Link href="/dashboard/applications" className="block w-full h-full">
+            <Link href="/dashboard/users" className="block w-full h-full">
               <Card className="w-full h-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
                   <CardHeader className="items-center text-center">
                       <div className="p-3 bg-primary/10 rounded-full">
@@ -112,9 +112,9 @@ export default function DashboardPage() {
                       </div>
                   </CardHeader>
                   <CardContent className="text-center">
-                      <CardTitle>Application List</CardTitle>
+                      <CardTitle>User List</CardTitle>
                       <CardDescription className="mt-2">
-                          View and manage all LLR applications.
+                          View and manage all registered users.
                       </CardDescription>
                   </CardContent>
               </Card>
