@@ -32,6 +32,7 @@ import {
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
+import Image from 'next/image';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -105,13 +106,20 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm border-0 shadow-none sm:border sm:shadow-sm">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
+      <Image
+        src="https://picsum.photos/seed/driving-school/1920/1080"
+        alt="A person learning to drive a car."
+        fill
+        className="object-cover -z-10 brightness-50"
+        data-ai-hint="driving school"
+      />
+      <Card className="w-full max-w-sm border-0 shadow-lg bg-background/80 backdrop-blur-sm text-card-foreground">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
             {isSigningUp ? 'Create an Account' : 'Welcome Back!'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-card-foreground/80">
             {isSigningUp
               ? 'Enter your details to create a new account.'
               : 'Sign in to access your dashboard.'}
@@ -131,6 +139,7 @@ export default function LoginPage() {
                         type="email"
                         placeholder="user@example.com"
                         {...field}
+                        className="bg-background/50"
                       />
                     </FormControl>
                     <FormMessage />
@@ -148,6 +157,7 @@ export default function LoginPage() {
                         type="password"
                         placeholder="••••••••"
                         {...field}
+                        className="bg-background/50"
                       />
                     </FormControl>
                     <FormMessage />
