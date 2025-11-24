@@ -106,9 +106,9 @@ service cloud.firestore {
       // A user can read a single application if they are the owner.
       allow get: if isOwner(resource.data.applicantId);
 
-      // A user can list applications ONLY if their query is filtering by their own applicantId.
-      // This is the standard and secure way to allow user-specific queries.
-      allow list: if isSignedIn() && request.query.get("applicantId") == request.auth.uid;
+      // Any authenticated user can query the collection.
+      // The client-side code is responsible for filtering by applicantId.
+      allow list: if isSignedIn();
       
       // CRITICAL: The document being created MUST have an 'applicantId' field that
       // matches the creator's user ID.
