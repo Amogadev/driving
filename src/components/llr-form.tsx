@@ -4,8 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { addDocumentNonBlocking, useAuth } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -39,7 +38,6 @@ import {
   User,
   MapPin,
   Phone,
-  Mail,
   FileText,
   Loader2,
   CheckCircle,
@@ -53,6 +51,8 @@ import {
   Users
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { collection } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -79,6 +79,9 @@ export function LLRForm() {
   const [submitted, setSubmitted] = useState(false);
   const [applicationId, setApplicationId] = useState("");
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const user = auth.currentUser;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -101,11 +104,21 @@ export function LLRForm() {
   const signatureFileRef = form.register("signature");
 
   async function onSubmit(values: FormValues) {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be logged in to submit an application.",
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       const newApplicationId = `DW-LLR-${Date.now()}`;
       const applicationData = {
         applicationId: newApplicationId,
+        applicantId: user.uid,
         fullName: values.fullName,
         fatherName: values.fatherName,
         gender: values.gender,
@@ -135,7 +148,8 @@ export function LLRForm() {
         submittedAt: new Date(),
       };
 
-      await addDoc(collection(db, "LLR_Applications"), applicationData);
+      const applicationsCollection = collection(firestore, 'llr_applications');
+      addDocumentNonBlocking(applicationsCollection, applicationData);
       
       setApplicationId(newApplicationId);
       setSubmitted(true);
