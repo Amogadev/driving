@@ -51,7 +51,7 @@ export default function LoginPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: '',
+      password: 'admin123',
     },
   });
 
@@ -82,9 +82,13 @@ export default function LoginPage() {
         if (error instanceof FirebaseError) {
             switch (error.code) {
                 case 'auth/invalid-credential':
-                case 'auth/user-not-found':
-                case 'auth/wrong-password':
                     description = 'Invalid credentials. Please check your email and password.';
+                    break;
+                case 'auth/user-not-found':
+                    description = 'No account found with this email. Please sign up.';
+                    break;
+                case 'auth/wrong-password':
+                    description = 'Incorrect password. Please try again.';
                     break;
                 case 'auth/email-already-in-use':
                     description = 'This email is already in use. Please sign in or use a different email.';
@@ -196,7 +200,7 @@ export default function LoginPage() {
               className="p-0 h-auto font-semibold text-white hover:text-white/80"
               onClick={() => {
                 setIsSigningUp(!isSigningUp);
-                form.reset();
+                form.reset({ email: '', password: 'admin123' });
               }}
               type="button"
             >
