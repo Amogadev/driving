@@ -125,6 +125,57 @@ function UserDetailsDialog({ userId }: { userId: string }) {
     );
 }
 
+
+function UserPendingAmount({ userId }: { userId: string }) {
+    const firestore = useFirestore();
+    const [pendingAmount, setPendingAmount] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+  
+    useEffect(() => {
+      if (!firestore || !userId) return;
+  
+      const fetchAmount = async () => {
+        setIsLoading(true);
+        const llrApplicationsRef = collection(firestore, 'llr_applications');
+        const q = query(
+          llrApplicationsRef,
+          where('applicantId', '==', userId),
+          orderBy('submittedAt', 'desc'),
+          limit(1)
+        );
+  
+        try {
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const latestApplication = querySnapshot.docs[0].data();
+            const totalFee = latestApplication.totalFee || 0;
+            const paidAmount = latestApplication.paidAmount || 0;
+            setPendingAmount(totalFee - paidAmount);
+          } else {
+            setPendingAmount(0);
+          }
+        } catch (e) {
+          console.error("Failed to fetch pending amount", e);
+          setPendingAmount(null); // Indicate error
+        } finally {
+          setIsLoading(false);
+        }
+      };
+  
+      fetchAmount();
+    }, [firestore, userId]);
+  
+    if (isLoading) {
+      return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+  
+    if (pendingAmount === null) {
+      return <span className="text-destructive">Error</span>;
+    }
+  
+    return <span>₹{pendingAmount.toFixed(2)}</span>;
+  }
+
 export default function UsersListPage() {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -220,6 +271,7 @@ export default function UsersListPage() {
                         <div className="flex items-center">Username {getSortIndicator('username')}</div>
                       </TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Pending Amount</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -230,6 +282,9 @@ export default function UsersListPage() {
                           <TableCell>{String(index + 1).padStart(3, '0')}</TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
                           <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <UserPendingAmount userId={user.id} />
+                          </TableCell>
                           <TableCell className="text-right">
                             <UserDetailsDialog userId={user.id} />
                           </TableCell>
@@ -238,7 +293,7 @@ export default function UsersListPage() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={5}
                           className="h-24 text-center"
                         >
                           No users found.
@@ -257,3 +312,4 @@ export default function UsersListPage() {
 }
 
     
+
