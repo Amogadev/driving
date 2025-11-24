@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -73,6 +74,7 @@ const formSchema = z.object({
   photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
   signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
   applicationFee: z.number().positive({ message: "Fee must be a positive number." }),
+  otherFee: z.number().nonnegative({ message: "Fee must be a positive number." }),
   totalFee: z.number().positive({ message: "Fee must be a positive number." }),
   paymentStatus: z.enum(["Paid", "Unpaid"], { required_error: "Payment status is required." }),
 });
@@ -102,10 +104,21 @@ export function LLRForm() {
       district: "",
       pincode: "",
       applicationFee: 500,
+      otherFee: 0,
       totalFee: 500,
       paymentStatus: "Unpaid",
     },
   });
+  
+  const { watch, setValue } = form;
+
+  const applicationFee = watch("applicationFee");
+  const otherFee = watch("otherFee");
+
+  useEffect(() => {
+    const total = (applicationFee || 0) + (otherFee || 0);
+    setValue("totalFee", total);
+  }, [applicationFee, otherFee, setValue]);
 
   const photoFileRef = form.register("photo");
   const signatureFileRef = form.register("signature");
@@ -152,6 +165,7 @@ export function LLRForm() {
             type: values.signature[0].type,
         },
         applicationFee: values.applicationFee,
+        otherFee: values.otherFee,
         totalFee: values.totalFee,
         paymentStatus: values.paymentStatus,
         status: "Submitted",
@@ -540,7 +554,7 @@ export function LLRForm() {
                         <CardTitle className="text-xl">Payment Details</CardTitle>
                         <CardDescription>Confirm your payment for the application.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid md:grid-cols-2 gap-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <FormField
                             control={form.control}
                             name="applicationFee"
@@ -555,7 +569,28 @@ export function LLRForm() {
                                             {...field} 
                                             className="pl-10" 
                                             readOnly 
-                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="otherFee"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Other Fee</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            type="number"
+                                            {...field}
+                                            className="pl-10"
+                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                                         />
                                     </div>
                                 </FormControl>
@@ -568,16 +603,16 @@ export function LLRForm() {
                             name="totalFee"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Total Pay Fee</FormLabel>
+                                <FormLabel>TOTAL Fee</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input 
                                             type="number" 
                                             {...field} 
-                                            className="pl-10" 
+                                            className="pl-10 font-bold" 
                                             readOnly 
-                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                                         />
                                     </div>
                                 </FormControl>
@@ -636,3 +671,5 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
