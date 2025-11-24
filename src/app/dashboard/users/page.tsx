@@ -120,22 +120,22 @@ export default function UsersListPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>User ID</TableHead>
                       <TableHead className="cursor-pointer" onClick={() => requestSort('username')}>
                         <div className="flex items-center">Username {getSortIndicator('username')}</div>
                       </TableHead>
                       <TableHead className="cursor-pointer" onClick={() => requestSort('email')}>
                         <div className="flex items-center">Email {getSortIndicator('email')}</div>
                       </TableHead>
-                      <TableHead>User ID</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user) => (
+                      filteredUsers.map((user, index) => (
                         <TableRow key={user.id}>
+                          <TableCell>{String(index + 1).padStart(3, '0')}</TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
                           <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.id}</TableCell>
                         </TableRow>
                       ))
                     ) : (
