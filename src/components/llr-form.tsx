@@ -51,15 +51,17 @@ import {
   Droplets,
   Users,
   CreditCard,
-  CircleDollarSign
+  CircleDollarSign,
+  Mail,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDocs, query, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   fatherName: z.string().min(2, { message: "Father's name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
   gender: z.enum(["male", "female"], { required_error: "Gender is required." }),
   dob: z.date({ required_error: "A date of birth is required." }),
   bloodGroup: z.string().min(1, { message: "Blood group is required." }),
@@ -93,6 +95,7 @@ export function LLRForm() {
     defaultValues: {
       fullName: "",
       fatherName: "",
+      email: "",
       bloodGroup: "",
       phone: "",
       doorNo: "",
@@ -129,22 +132,26 @@ export function LLRForm() {
       
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
-
-      // Add/update user in the 'users' collection
-      const userRef = doc(firestore, 'users', user.uid);
+      
+      // Generate a unique ID for the new user document based on name and timestamp
+      const newUserId = `${values.fullName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      const userRef = doc(firestore, 'users', newUserId);
       const username = values.fullName.split(' ')[0] || '';
+      
+      // Create a new user document for this applicant
       await setDoc(userRef, {
-          id: user.uid,
+          id: newUserId,
           username: username,
-          email: user.email,
-      }, { merge: true });
+          email: values.email, // Use email from the form
+      });
+
 
       const submittedAtDate = new Date();
       const paymentDueDate = addDays(submittedAtDate, 15);
 
       const applicationData = {
         applicationId: newApplicationId,
-        applicantId: user.uid,
+        applicantId: newUserId, // Link application to the new user document ID
         fullName: values.fullName,
         fatherName: values.fatherName,
         gender: values.gender,
@@ -257,6 +264,22 @@ export function LLRForm() {
                                     <div className="relative">
                                         <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input placeholder="K.S. Jeyaraj" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input type="email" placeholder="user@example.com" {...field} className="pl-10"/>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -652,5 +675,7 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
