@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2, LogOut, Users } from 'lucide-react';
 import { useEffect } from 'react';
 import {
   Card,
@@ -79,10 +79,10 @@ export default function DashboardPage() {
             Here you can manage your LLR applications.
           </p>
 
-          <div className="flex justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-center">
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="w-full max-w-sm cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
+                <Card className="w-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
                   <CardHeader className="items-center text-center">
                     <div className="p-3 bg-primary/10 rounded-full">
                       <FilePlus className="h-8 w-8 text-primary" />
@@ -104,6 +104,20 @@ export default function DashboardPage() {
                 <LLRForm />
               </DialogContent>
             </Dialog>
+            
+            <Card className="w-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
+                <CardHeader className="items-center text-center">
+                    <div className="p-3 bg-primary/10 rounded-full">
+                        <Users className="h-8 w-8 text-primary" />
+                    </div>
+                </CardHeader>
+                <CardContent className="text-center">
+                    <CardTitle>User List</CardTitle>
+                    <CardDescription className="mt-2">
+                        View and manage the list of registered users.
+                    </CardDescription>
+                </CardContent>
+            </Card>
           </div>
         </main>
       </div>
