@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -103,22 +104,20 @@ export default function DashboardPage() {
               </DialogContent>
             </Dialog>
             
-            <Link href="/dashboard/applications" legacyBehavior>
-              <a className="block w-full h-full">
-                <Card className="w-full h-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
-                    <CardHeader className="items-center text-center">
-                        <div className="p-3 bg-primary/10 rounded-full">
-                            <Users className="h-8 w-8 text-primary" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <CardTitle>Application List</CardTitle>
-                        <CardDescription className="mt-2">
-                            View and manage all LLR applications.
-                        </CardDescription>
-                    </CardContent>
-                </Card>
-              </a>
+            <Link href="/dashboard/applications" className="block w-full h-full">
+              <Card className="w-full h-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
+                  <CardHeader className="items-center text-center">
+                      <div className="p-3 bg-primary/10 rounded-full">
+                          <Users className="h-8 w-8 text-primary" />
+                      </div>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                      <CardTitle>Application List</CardTitle>
+                      <CardDescription className="mt-2">
+                          View and manage all LLR applications.
+                      </CardDescription>
+                  </CardContent>
+              </Card>
             </Link>
           </div>
         </main>
