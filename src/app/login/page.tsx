@@ -108,7 +108,7 @@ export default function LoginPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
       <Image
-        src="https://picsum.photos/seed/driving-school/1920/1080"
+        src="https://images.unsplash.com/photo-1691371107034-e28ee43a669e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxkcml2aW5nJTIwc2Nob29sfGVufDB8fHx8MTc2Mzk2NTkyN3ww&ixlib=rb-4.1.0&q=80&w=1080"
         alt="A person learning to drive a car."
         fill
         className="object-cover -z-10 brightness-50"
