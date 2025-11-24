@@ -72,12 +72,9 @@ export default function DashboardPage() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <h2 className="text-3xl font-bold mb-2">
+          <h2 className="text-3xl font-bold mb-8">
             Welcome, {user?.displayName || user?.email?.split('@')[0]}!
           </h2>
-          <p className="text-muted-foreground mb-8">
-            Here you can manage your LLR applications.
-          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-center">
             <Dialog>
