@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { LLRForm } from '@/components/llr-form';
+import Link from 'next/link';
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -102,19 +103,23 @@ export default function DashboardPage() {
               </DialogContent>
             </Dialog>
             
-            <Card className="w-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
-                <CardHeader className="items-center text-center">
-                    <div className="p-3 bg-primary/10 rounded-full">
-                        <Users className="h-8 w-8 text-primary" />
-                    </div>
-                </CardHeader>
-                <CardContent className="text-center">
-                    <CardTitle>User List</CardTitle>
-                    <CardDescription className="mt-2">
-                        View and manage the list of registered users.
-                    </CardDescription>
-                </CardContent>
-            </Card>
+            <Link href="/dashboard/applications" legacyBehavior>
+              <a className="block w-full h-full">
+                <Card className="w-full h-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
+                    <CardHeader className="items-center text-center">
+                        <div className="p-3 bg-primary/10 rounded-full">
+                            <Users className="h-8 w-8 text-primary" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <CardTitle>Application List</CardTitle>
+                        <CardDescription className="mt-2">
+                            View and manage all LLR applications.
+                        </CardDescription>
+                    </CardContent>
+                </Card>
+              </a>
+            </Link>
           </div>
         </main>
       </div>
