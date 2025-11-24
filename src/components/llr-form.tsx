@@ -43,16 +43,31 @@ import {
   FileText,
   Loader2,
   CheckCircle,
+  Home,
+  Signpost,
+  Building,
+  Landmark,
+  Globe,
+  Car,
+  Droplets,
+  Users
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+  fatherName: z.string().min(2, { message: "Father's name must be at least 2 characters." }),
+  gender: z.enum(["male", "female"], { required_error: "Gender is required." }),
   dob: z.date({ required_error: "A date of birth is required." }),
-  address: z.string().min(10, { message: "Please enter a valid address." }),
+  bloodGroup: z.string().min(1, { message: "Blood group is required." }),
   phone: z.string().regex(/^(?:\+91)?[6-9]\d{9}$/, { message: "Please enter a valid 10-digit Indian mobile number." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  aadhar: z.string().regex(/^\d{12}$/, { message: "Aadhar card must be 12 digits." }),
-  pan: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: "Invalid PAN card format." }).optional().or(z.literal('')),
+  doorNo: z.string().min(1, { message: "Door number is required." }),
+  streetName: z.string().min(3, { message: "Street name is required." }),
+  villageOrTown: z.string().min(3, { message: "Village or town is required." }),
+  taluk: z.string().min(3, { message: "Taluk is required." }),
+  district: z.string().min(3, { message: "District is required." }),
+  pincode: z.string().regex(/^\d{6}$/, { message: "Pincode must be 6 digits." }),
+  classOfVehicle: z.string().min(2, { message: "Class of vehicle is required." }),
   photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
   signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
 });
@@ -69,11 +84,16 @@ export function LLRForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
-      address: "",
+      fatherName: "",
+      bloodGroup: "",
       phone: "",
-      email: "",
-      aadhar: "",
-      pan: "",
+      doorNo: "",
+      streetName: "",
+      villageOrTown: "",
+      taluk: "",
+      district: "",
+      pincode: "",
+      classOfVehicle: "",
     },
   });
 
@@ -87,12 +107,20 @@ export function LLRForm() {
       const applicationData = {
         applicationId: newApplicationId,
         fullName: values.fullName,
+        fatherName: values.fatherName,
+        gender: values.gender,
         dob: format(values.dob, "yyyy-MM-dd"),
-        address: values.address,
+        bloodGroup: values.bloodGroup,
         phone: values.phone,
-        email: values.email,
-        aadhar: values.aadhar,
-        pan: values.pan,
+        address: {
+            doorNo: values.doorNo,
+            streetName: values.streetName,
+            villageOrTown: values.villageOrTown,
+            taluk: values.taluk,
+            district: values.district,
+            pincode: values.pincode,
+        },
+        classOfVehicle: values.classOfVehicle,
         photo: {
           name: values.photo[0].name,
           size: values.photo[0].size,
@@ -166,12 +194,58 @@ export function LLRForm() {
                             name="fullName"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Full Name</FormLabel>
+                                <FormLabel>Name</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="John Doe" {...field} className="pl-10"/>
+                                        <Input placeholder="J. Antony Andrews" {...field} className="pl-10"/>
                                     </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="fatherName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Father's Name</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="K.S. Jeyaraj" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="gender"
+                            render={({ field }) => (
+                                <FormItem className="space-y-3 pt-2">
+                                <FormLabel>Gender</FormLabel>
+                                <FormControl>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex items-center space-x-4"
+                                    >
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="male" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Male</FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="female" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Female</FormLabel>
+                                    </FormItem>
+                                    </RadioGroup>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -220,16 +294,16 @@ export function LLRForm() {
                                 </FormItem>
                             )}
                         />
-                         <FormField
+                        <FormField
                             control={form.control}
-                            name="address"
+                            name="bloodGroup"
                             render={({ field }) => (
-                                <FormItem className="md:col-span-2">
-                                <FormLabel>Full Address</FormLabel>
+                                <FormItem>
+                                <FormLabel>Blood Group</FormLabel>
                                 <FormControl>
-                                     <div className="relative">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="123, Main Street, Anytown, State, ZIP" {...field} className="pl-10"/>
+                                    <div className="relative">
+                                        <Droplets className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="A+" {...field} className="pl-10"/>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -241,11 +315,35 @@ export function LLRForm() {
                             name="phone"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
+                                <FormLabel>Mobile No</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="9876543210" {...field} className="pl-10"/>
+                                        <Input placeholder="9952840563" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                 <Card className="border-border/50">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Address Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="doorNo"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Door No</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="3/518" {...field} className="pl-10"/>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -254,14 +352,78 @@ export function LLRForm() {
                         />
                         <FormField
                             control={form.control}
-                            name="email"
+                            name="streetName"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Email Address</FormLabel>
+                                <FormLabel>Street Name</FormLabel>
                                 <FormControl>
                                     <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="john.doe@example.com" {...field} className="pl-10"/>
+                                        <Signpost className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Mair Road" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="villageOrTown"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Village / Town</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Micheal Palayam" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="taluk"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Taluk</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Nilakkottai" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="district"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>District</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Dindigul" {...field} className="pl-10"/>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="pincode"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Pin Code</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="624215" {...field} className="pl-10"/>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
@@ -273,42 +435,27 @@ export function LLRForm() {
 
                 <Card className="border-border/50">
                     <CardHeader>
-                        <CardTitle className="text-xl">LLR Document Details</CardTitle>
-                        <CardDescription>Provide your identification documents. All documents are required.</CardDescription>
+                        <CardTitle className="text-xl">Document & Vehicle Details</CardTitle>
+                        <CardDescription>Provide your identification documents and vehicle class.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
-                            name="aadhar"
+                            name="classOfVehicle"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Aadhar Card Number</FormLabel>
-                                <FormControl>
-                                     <div className="relative">
-                                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="XXXX XXXX XXXX" {...field} className="pl-10"/>
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="pan"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>PAN Card Number (Optional)</FormLabel>
+                                <FormLabel>Class of Vehicle</FormLabel>
                                 <FormControl>
                                     <div className="relative">
-                                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="ABCDE1234F" {...field} className="pl-10"/>
+                                        <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="e.g., MCWOG, LMV" {...field} className="pl-10"/>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        <div />
                         <FormField
                             control={form.control}
                             name="photo"
