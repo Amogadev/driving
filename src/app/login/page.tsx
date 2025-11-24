@@ -176,31 +176,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            {isSigningUp ? (
-              <>
-                Already have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0 text-white/80 hover:text-white"
-                  onClick={() => setIsSigningUp(false)}
-                >
-                  Sign In
-                </Button>
-              </>
-            ) : (
-              <>
-                Don&apos;t have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0 text-white/80 hover:text-white"
-                  onClick={() => setIsSigningUp(true)}
-                >
-                  Sign Up
-                </Button>
-              </>
-            )}
-          </div>
         </CardContent>
       </Card>
     </main>
