@@ -71,8 +71,8 @@ const formSchema = z.object({
   district: z.string().min(3, { message: "District is required." }),
   pincode: z.string().regex(/^\d{6}$/, { message: "Pincode must be 6 digits." }),
   classOfVehicle: z.enum(["MCWOG", "LMV", "MCWOG + LMV"], { required_error: "You need to select a class of vehicle." }),
-  photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
-  signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
+  photo: z.any().optional(),
+  signature: z.any().optional(),
   totalFee: z.number().positive({ message: "Fee must be a positive number." }),
   paidAmount: z.number().nonnegative({ message: "Paid amount cannot be negative." }),
   paymentStatus: z.enum(["Paid", "Unpaid"], { required_error: "Payment status is required." }),
@@ -124,6 +124,10 @@ export function LLRForm() {
     setLoading(true);
     try {
       const newApplicationId = `DW-LLR-${Date.now()}`;
+      
+      const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
+      const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
+
       const applicationData = {
         applicationId: newApplicationId,
         applicantId: user.uid,
@@ -142,16 +146,16 @@ export function LLRForm() {
             pincode: values.pincode,
         },
         classOfVehicle: values.classOfVehicle,
-        photo: {
-          name: values.photo[0].name,
-          size: values.photo[0].size,
-          type: values.photo[0].type,
-        },
-        signature: {
-            name: values.signature[0].name,
-            size: values.signature[0].size,
-            type: values.signature[0].type,
-        },
+        photo: photoFile ? {
+          name: photoFile.name,
+          size: photoFile.size,
+          type: photoFile.type,
+        } : null,
+        signature: signatureFile ? {
+            name: signatureFile.name,
+            size: signatureFile.size,
+            type: signatureFile.type,
+        } : null,
         totalFee: values.totalFee,
         paidAmount: values.paidAmount,
         paymentStatus: values.paymentStatus,
@@ -639,3 +643,4 @@ export function LLRForm() {
     
 
     
+
