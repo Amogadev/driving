@@ -73,6 +73,7 @@ const formSchema = z.object({
   photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
   signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
   applicationFee: z.number().positive({ message: "Fee must be a positive number." }),
+  totalFee: z.number().positive({ message: "Fee must be a positive number." }),
   paymentStatus: z.enum(["Paid", "Unpaid"], { required_error: "Payment status is required." }),
 });
 
@@ -101,6 +102,7 @@ export function LLRForm() {
       district: "",
       pincode: "",
       applicationFee: 500,
+      totalFee: 500,
       paymentStatus: "Unpaid",
     },
   });
@@ -150,6 +152,7 @@ export function LLRForm() {
             type: values.signature[0].type,
         },
         applicationFee: values.applicationFee,
+        totalFee: values.totalFee,
         paymentStatus: values.paymentStatus,
         status: "Submitted",
         submittedAt: new Date(),
@@ -544,6 +547,28 @@ export function LLRForm() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Application Fee</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            type="number" 
+                                            {...field} 
+                                            className="pl-10" 
+                                            readOnly 
+                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="totalFee"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Total Pay Fee</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
