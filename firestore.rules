@@ -53,14 +53,14 @@ service cloud.firestore {
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document, e.g., `db.collection('users').doc('user_abc').set({ id: 'user_abc', ... })` where auth.uid is 'user_abc'.
+     * @allow (create) Any authenticated user can create a new user profile. This is necessary for an admin to create users.
      * @deny (update) User 'user_xyz' trying to update the profile of 'user_abc'.
-     * @principle Enforces Self-Creation and Ownership. A user can create their own document and is the only one who can read or modify it thereafter. Listing all users is allowed for authenticated users.
+     * @principle Allows creation by any signed-in user but restricts read/modify to the owner. Listing all users is allowed for authenticated users.
      */
     match /users/{userId} {
-      allow get: if isSignedIn();
+      allow get: if isOwner(userId);
       allow list: if isSignedIn();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow create: if isSignedIn(); // Allow any authenticated user to create a new user
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
@@ -110,9 +110,9 @@ service cloud.firestore {
       // The client-side code is responsible for filtering by applicantId.
       allow list: if isSignedIn();
       
-      // CRITICAL: The document being created MUST have an 'applicantId' field that
-      // matches the creator's user ID.
-      allow create: if isSignedIn() && request.resource.data.applicantId == request.auth.uid;
+      // CRITICAL: The document being created MUST have an 'applicantId' field.
+      // This is now used by the client to associate applications with users.
+      allow create: if isSignedIn() && request.resource.data.applicantId != null;
       
       // CRITICAL: The 'applicantId' field must not be changed after creation.
       allow update: if isExistingOwner(resource.data.applicantId) && request.resource.data.applicantId == resource.data.applicantId;
