@@ -153,7 +153,7 @@ export function LLRForm() {
 
   if (submitted) {
     return (
-      <Card className="w-full max-w-2xl mx-auto animate-in fade-in-50">
+      <Card className="w-full max-w-2xl mx-auto animate-in fade-in-50 border-none shadow-none">
         <CardHeader className="items-center text-center p-8">
             <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
           <CardTitle className="text-2xl">Application Submitted!</CardTitle>
@@ -176,7 +176,7 @@ export function LLRForm() {
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-xl border-2">
+    <Card className="w-full mx-auto shadow-none border-none">
         <CardHeader>
             <CardTitle className="text-3xl font-headline">LLR Application Form</CardTitle>
             <CardDescription>Fill in the details below to register for your Learner's License.</CardDescription>
