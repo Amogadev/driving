@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Separator } from '@/components/ui/separator';
 
 type SortConfig = {
   key: string;
@@ -41,6 +42,8 @@ type SortConfig = {
 };
 
 type PaymentDetails = {
+    totalFee: number;
+    paidAmount: number;
     pendingAmount: number;
     paymentDueDate: string | null;
 };
@@ -80,9 +83,9 @@ function UserDetailsDialog({ userId }: { userId: string }) {
                     ? format(new Date(latestApplication.paymentDueDate), 'PPP') 
                     : "Not set";
                 
-                setDetails({ pendingAmount, paymentDueDate });
+                setDetails({ totalFee, paidAmount, pendingAmount, paymentDueDate });
             } else {
-                setDetails({ pendingAmount: 0, paymentDueDate: "No application found" });
+                setDetails({ totalFee: 0, paidAmount: 0, pendingAmount: 0, paymentDueDate: "No application found" });
             }
             setIsLoading(false);
         }).catch((e: any) => {
@@ -107,7 +110,7 @@ function UserDetailsDialog({ userId }: { userId: string }) {
                 <DialogHeader>
                     <DialogTitle>User Payment Details</DialogTitle>
                     <DialogDescription>
-                        Showing pending amount and due date for the latest application.
+                        Showing payment details for the latest application.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -115,10 +118,20 @@ function UserDetailsDialog({ userId }: { userId: string }) {
                     {error && <p className="text-sm text-destructive">{error}</p>}
                     {details && !isLoading && (
                         <div className="space-y-4">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Pending Amount</p>
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Total Fee (Rate)</p>
+                                <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Amount Paid</p>
+                                <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                            </div>
+                            <Separator />
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm font-medium">Pending Amount</p>
                                 <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
                             </div>
+                            <Separator />
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
                                 <p className="text-lg font-semibold">{details.paymentDueDate}</p>
@@ -321,7 +334,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    
-
-    
