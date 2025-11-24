@@ -48,7 +48,9 @@ import {
   Globe,
   Car,
   Droplets,
-  Users
+  Users,
+  CreditCard,
+  CircleDollarSign
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { collection } from "firebase/firestore";
@@ -70,6 +72,8 @@ const formSchema = z.object({
   classOfVehicle: z.string().min(2, { message: "Class of vehicle is required." }),
   photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
   signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
+  applicationFee: z.number().positive({ message: "Fee must be a positive number." }),
+  paymentStatus: z.enum(["Paid", "Unpaid"], { required_error: "Payment status is required." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -97,6 +101,8 @@ export function LLRForm() {
       district: "",
       pincode: "",
       classOfVehicle: "",
+      applicationFee: 500,
+      paymentStatus: "Unpaid",
     },
   });
 
@@ -144,6 +150,8 @@ export function LLRForm() {
             size: values.signature[0].size,
             type: values.signature[0].type,
         },
+        applicationFee: values.applicationFee,
+        paymentStatus: values.paymentStatus,
         status: "Submitted",
         submittedAt: new Date(),
       };
@@ -494,6 +502,67 @@ export function LLRForm() {
                                     <Input type="file" accept="image/png, image/jpeg" {...signatureFileRef} />
                                 </FormControl>
                                 <FormDescription>Upload an image of your signature. (JPG, PNG)</FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/50">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Payment Details</CardTitle>
+                        <CardDescription>Confirm your payment for the application.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="applicationFee"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Application Fee</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            type="number" 
+                                            {...field} 
+                                            className="pl-10" 
+                                            readOnly 
+                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="paymentStatus"
+                            render={({ field }) => (
+                                <FormItem className="space-y-3 pt-2">
+                                <FormLabel>Payment Status</FormLabel>
+                                <FormControl>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex items-center space-x-4"
+                                    >
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="Paid" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Paid</FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="Unpaid" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Unpaid</FormLabel>
+                                    </FormItem>
+                                    </RadioGroup>
+                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
