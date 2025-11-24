@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, errorEmitter } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 
@@ -57,6 +57,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { collection, addDoc, serverTimestamp, doc, setDoc, getDocs, query, where } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -133,17 +136,15 @@ export function LLRForm() {
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
       
-      // Generate a unique ID for the new user document based on name and timestamp
       const newUserId = `${values.fullName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       const userRef = doc(firestore, 'users', newUserId);
-      const username = values.fullName.split(' ')[0] || '';
-      
-      // Create a new user document for this applicant
-      await setDoc(userRef, {
+      const userData = {
           id: newUserId,
           username: values.fullName,
           email: values.email,
-      });
+      };
+      
+      setDocumentNonBlocking(userRef, userData, {});
 
       const submittedAtDate = new Date();
       const paymentDueDate = addDays(submittedAtDate, 15);
@@ -184,7 +185,7 @@ export function LLRForm() {
         paymentDueDate: format(paymentDueDate, "yyyy-MM-dd"),
       };
 
-      await addDoc(applicationsCollection, applicationData);
+      addDocumentNonBlocking(applicationsCollection, applicationData);
       
       setApplicationId(newApplicationId);
       setSubmitted(true);
@@ -674,5 +675,7 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
