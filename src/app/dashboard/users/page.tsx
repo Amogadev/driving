@@ -32,6 +32,8 @@ import { Input } from '@/components/ui/input';
 import { Loader2, ArrowLeft, Search, ArrowUpDown, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type SortConfig = {
   key: string;
@@ -53,16 +55,16 @@ function UserDetailsDialog({ userId }: { userId: string }) {
         if (!firestore) return;
         setIsLoading(true);
         setError(null);
-        try {
-            const llrApplicationsRef = collection(firestore, 'llr_applications');
-            const q = query(
-                llrApplicationsRef, 
-                where('applicantId', '==', userId),
-                orderBy('submittedAt', 'desc'),
-                limit(1)
-            );
-            const querySnapshot = await getDocs(q);
+        
+        const llrApplicationsRef = collection(firestore, 'llr_applications');
+        const q = query(
+            llrApplicationsRef, 
+            where('applicantId', '==', userId),
+            orderBy('submittedAt', 'desc'),
+            limit(1)
+        );
 
+        getDocs(q).then((querySnapshot) => {
             if (!querySnapshot.empty) {
                 const latestApplication = querySnapshot.docs[0].data();
                 const totalFee = latestApplication.totalFee || 0;
@@ -76,12 +78,16 @@ function UserDetailsDialog({ userId }: { userId: string }) {
             } else {
                 setDetails({ pendingAmount: 0, paymentDueDate: "No application found" });
             }
-        } catch (e: any) {
-            setError("Failed to fetch payment details.");
-            console.error(e);
-        } finally {
             setIsLoading(false);
-        }
+        }).catch((e: any) => {
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: 'llr_applications',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            setError("Failed to fetch payment details.");
+            setIsLoading(false);
+        });
     };
 
     return (
