@@ -34,6 +34,8 @@ import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
 
+export const dynamic = 'force-dynamic';
+
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),

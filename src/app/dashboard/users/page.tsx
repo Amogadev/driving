@@ -36,6 +36,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
 
+export const dynamic = 'force-dynamic';
+
 type SortConfig = {
   key: string;
   direction: 'ascending' | 'descending';
@@ -70,8 +72,8 @@ function UserDetailsDialog({ userId }: { userId: string }) {
                 // Manually sort by submittedAt to find the latest
                 const applications = querySnapshot.docs.map(doc => doc.data());
                 applications.sort((a, b) => {
-                    const dateA = a.submittedAt?.toDate() || 0;
-                    const dateB = b.submittedAt?.toDate() || 0;
+                    const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : 0;
+                    const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : 0;
                     return dateB - dateA;
                 });
 
@@ -167,8 +169,8 @@ function UserPendingAmount({ userId }: { userId: string }) {
             // Manually sort by submittedAt to find the latest
             const applications = querySnapshot.docs.map(doc => doc.data());
             applications.sort((a, b) => {
-                const dateA = a.submittedAt?.toDate() || 0;
-                const dateB = b.submittedAt?.toDate() || 0;
+                const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : 0;
+                const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : 0;
                 return dateB - dateA;
             });
             const latestApplication = applications[0];

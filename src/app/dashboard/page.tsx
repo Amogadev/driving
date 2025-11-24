@@ -24,6 +24,8 @@ import {
 import { LLRForm } from '@/components/llr-form';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
