@@ -35,9 +35,7 @@ import { FirebaseError } from 'firebase/app';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z
-    .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+  password: z.string().min(1, { message: 'Password cannot be empty.' }),
 });
 
 export default function LoginPage() {
@@ -80,10 +78,12 @@ export default function LoginPage() {
     } catch (error: any) {
         let description = 'Please check your credentials and try again.';
         if (error instanceof FirebaseError) {
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                 description = 'Invalid user or password. If you are new, please sign up.';
             } else if (error.code === 'auth/email-already-in-use') {
                 description = 'This email is already in use. Please sign in.';
+            } else if (error.code === 'auth/weak-password') {
+                description = 'Password is too weak. Please use at least 6 characters.'
             }
         }
       toast({
