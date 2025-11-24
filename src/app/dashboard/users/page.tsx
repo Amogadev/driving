@@ -59,14 +59,20 @@ function UserDetailsDialog({ userId }: { userId: string }) {
         const llrApplicationsRef = collection(firestore, 'llr_applications');
         const q = query(
             llrApplicationsRef, 
-            where('applicantId', '==', userId),
-            orderBy('submittedAt', 'desc'),
-            limit(1)
+            where('applicantId', '==', userId)
         );
 
         getDocs(q).then((querySnapshot) => {
             if (!querySnapshot.empty) {
-                const latestApplication = querySnapshot.docs[0].data();
+                // Manually sort by submittedAt to find the latest
+                const applications = querySnapshot.docs.map(doc => doc.data());
+                applications.sort((a, b) => {
+                    const dateA = a.submittedAt?.toDate() || 0;
+                    const dateB = b.submittedAt?.toDate() || 0;
+                    return dateB - dateA;
+                });
+
+                const latestApplication = applications[0];
                 const totalFee = latestApplication.totalFee || 0;
                 const paidAmount = latestApplication.paidAmount || 0;
                 const pendingAmount = totalFee - paidAmount;
@@ -139,15 +145,20 @@ function UserPendingAmount({ userId }: { userId: string }) {
         const llrApplicationsRef = collection(firestore, 'llr_applications');
         const q = query(
           llrApplicationsRef,
-          where('applicantId', '==', userId),
-          orderBy('submittedAt', 'desc'),
-          limit(1)
+          where('applicantId', '==', userId)
         );
   
         try {
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
-            const latestApplication = querySnapshot.docs[0].data();
+            // Manually sort by submittedAt to find the latest
+            const applications = querySnapshot.docs.map(doc => doc.data());
+            applications.sort((a, b) => {
+                const dateA = a.submittedAt?.toDate() || 0;
+                const dateB = b.submittedAt?.toDate() || 0;
+                return dateB - dateA;
+            });
+            const latestApplication = applications[0];
             const totalFee = latestApplication.totalFee || 0;
             const paidAmount = latestApplication.paidAmount || 0;
             setPendingAmount(totalFee - paidAmount);
@@ -313,3 +324,4 @@ export default function UsersListPage() {
 
     
 
+    
