@@ -31,6 +31,7 @@ import {
 } from '@/firebase';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useEffect } from 'react';
+import { FirebaseError } from 'firebase/app';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -65,7 +66,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       if (isSigningUp) {
-        initiateEmailSignUp(auth, values.email, values.password);
+        await initiateEmailSignUp(auth, values.email, values.password);
         toast({
           title: 'Account Created!',
           description:
@@ -73,15 +74,22 @@ export default function LoginPage() {
         });
         setIsSigningUp(false); // Switch to sign in mode
       } else {
-        initiateEmailSignIn(auth, values.email, values.password);
+        await initiateEmailSignIn(auth, values.email, values.password);
         // The useEffect will handle the redirect on successful login
       }
     } catch (error: any) {
+        let description = 'Please check your credentials and try again.';
+        if (error instanceof FirebaseError) {
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+                description = 'Invalid user or password. If you are new, please sign up.';
+            } else if (error.code === 'auth/email-already-in-use') {
+                description = 'This email is already in use. Please sign in.';
+            }
+        }
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
-        description:
-          error.message || 'Please check your credentials and try again.',
+        description,
       });
     } finally {
       setIsSubmitting(false);
