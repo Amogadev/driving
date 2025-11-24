@@ -54,7 +54,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
@@ -158,9 +158,9 @@ export function LLRForm() {
         } : null,
         totalFee: values.totalFee,
         paidAmount: values.paidAmount,
-        paymentStatus: values.paymentStatus,
+        paymentStatus: values.paymentStatus || 'Unpaid',
         status: "Submitted",
-        submittedAt: new Date(),
+        submittedAt: serverTimestamp(),
       };
 
       const applicationsCollection = collection(firestore, 'llr_applications');

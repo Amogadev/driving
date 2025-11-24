@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -41,15 +42,17 @@ export default function ApplicationsListPage() {
     return query(
       collection(firestore, 'llr_applications'),
       where('applicantId', '==', user.uid),
-      orderBy(sortConfig?.key || 'submittedAt', sortConfig?.direction === 'ascending' ? 'asc' : 'desc')
+      // We are ordering by submittedAt by default. Other fields might not exist on all documents.
+      orderBy('submittedAt', sortConfig?.direction === 'ascending' ? 'asc' : 'desc')
     );
   }, [firestore, user, sortConfig]);
 
   const { data: applications, isLoading, error } = useCollection(applicationsQuery);
 
-  const filteredApplications = useMemo(() => {
+  const sortedAndFilteredApplications = useMemo(() => {
     if (!applications) return [];
-    return applications.filter((app) => {
+    
+    let filtered = applications.filter((app) => {
       const searchTermLower = searchTerm.toLowerCase();
       return (
         app.fullName?.toLowerCase().includes(searchTermLower) ||
@@ -57,7 +60,27 @@ export default function ApplicationsListPage() {
         app.phone?.includes(searchTerm)
       );
     });
-  }, [applications, searchTerm]);
+
+    if (sortConfig && sortConfig.key !== 'submittedAt') {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    return filtered;
+  }, [applications, searchTerm, sortConfig]);
   
   const requestSort = (key: string) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -137,8 +160,8 @@ export default function ApplicationsListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredApplications.length > 0 ? (
-                      filteredApplications.map((app) => (
+                    {sortedAndFilteredApplications.length > 0 ? (
+                      sortedAndFilteredApplications.map((app) => (
                         <TableRow key={app.id}>
                           <TableCell className="font-medium">{app.applicationId}</TableCell>
                           <TableCell>{app.fullName}</TableCell>
