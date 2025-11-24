@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth } from "@/firebase";
+import { useAuth, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -54,7 +54,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
@@ -86,8 +86,7 @@ export function LLRForm() {
   const [applicationId, setApplicationId] = useState("");
   const { toast } = useToast();
   const firestore = useFirestore();
-  const auth = useAuth();
-  const user = auth.currentUser;
+  const { user } = useUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -127,6 +126,16 @@ export function LLRForm() {
       
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
+
+      // Add/update user in the 'users' collection
+      const userRef = doc(firestore, 'users', user.uid);
+      const username = values.fullName.split(' ')[0] || '';
+      await setDoc(userRef, {
+          id: user.uid,
+          username: username,
+          email: user.email,
+      }, { merge: true });
+
 
       const applicationData = {
         applicationId: newApplicationId,
@@ -639,11 +648,5 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
-
-    
-
-
 
     
