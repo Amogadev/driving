@@ -102,9 +102,9 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes via a denormalized 'applicantId' field. Client queries must filter by this field for list operations to be secure.
      */
     match /llr_applications/{applicationId} {
-      // Allow read operations (get, list) only if the query filters by the user's applicantId.
-      // This ensures that users can only ever query for their own documents.
-      allow read: if isSignedIn() && request.query.resource.__name__[0] == database && request.query.resource.__name__[1] == "documents" && request.query.resource.__name__[2] == "llr_applications" && request.query.limit <= 100 && (request.query.filters[0].field.string_value == "applicantId" && request.query.filters[0].op.string_value == "EQUAL" && request.query.filters[0].value.string_value == request.auth.uid) ;
+      allow get: if isOwner(resource.data.applicantId);
+      // Allow a user to list documents only if their query filters by their own applicantId.
+      allow list: if isSignedIn() && request.query.get("applicantId") == request.auth.uid;
       
       // CRITICAL: The document being created MUST have an 'applicantId' field that
       // matches the creator's user ID.
