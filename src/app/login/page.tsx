@@ -114,12 +114,12 @@ export default function LoginPage() {
         className="object-cover -z-10 brightness-50"
         data-ai-hint="driving school"
       />
-      <Card className="w-full max-w-sm border-0 shadow-lg bg-background/80 backdrop-blur-sm text-card-foreground">
+      <Card className="w-full max-w-sm border-0 shadow-lg bg-transparent backdrop-blur-sm text-white">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
             {isSigningUp ? 'Create an Account' : 'Welcome Back!'}
           </CardTitle>
-          <CardDescription className="text-card-foreground/80">
+          <CardDescription className="text-white/80">
             {isSigningUp
               ? 'Enter your details to create a new account.'
               : 'Sign in to access your dashboard.'}
@@ -139,7 +139,7 @@ export default function LoginPage() {
                         type="email"
                         placeholder="user@example.com"
                         {...field}
-                        className="bg-background/50"
+                        className="bg-white/20 border-white/30 placeholder:text-white/60"
                       />
                     </FormControl>
                     <FormMessage />
@@ -157,14 +157,14 @@ export default function LoginPage() {
                         type="password"
                         placeholder="••••••••"
                         {...field}
-                        className="bg-background/50"
+                        className="bg-white/20 border-white/30 placeholder:text-white/60"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary text-white" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : isSigningUp ? (
@@ -182,7 +182,7 @@ export default function LoginPage() {
                 Already have an account?{' '}
                 <Button
                   variant="link"
-                  className="p-0"
+                  className="p-0 text-white/80 hover:text-white"
                   onClick={() => setIsSigningUp(false)}
                 >
                   Sign In
@@ -193,7 +193,7 @@ export default function LoginPage() {
                 Don&apos;t have an account?{' '}
                 <Button
                   variant="link"
-                  className="p-0"
+                  className="p-0 text-white/80 hover:text-white"
                   onClick={() => setIsSigningUp(true)}
                 >
                   Sign Up
