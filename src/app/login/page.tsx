@@ -36,7 +36,7 @@ import Image from 'next/image';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z.string().min(1, { message: 'Password cannot be empty.' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
 export default function LoginPage() {
@@ -50,8 +50,8 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'admin@gmail.com',
-      password: 'admin',
+      email: '',
+      password: '',
     },
   });
 
@@ -72,24 +72,37 @@ export default function LoginPage() {
             'Your account has been created. Please sign in.',
         });
         setIsSigningUp(false); // Switch to sign in mode
+        form.reset();
       } else {
         await initiateEmailSignIn(auth, values.email, values.password);
         // The useEffect will handle the redirect on successful login
       }
     } catch (error: any) {
-        let description = 'Please check your credentials and try again.';
+        let description = 'An unexpected error occurred. Please try again.';
         if (error instanceof FirebaseError) {
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                description = 'Invalid user or password. If you are new, please sign up.';
-            } else if (error.code === 'auth/email-already-in-use') {
-                description = 'This email is already in use. Please sign in.';
-            } else if (error.code === 'auth/weak-password') {
-                description = 'Password is too weak. Please use at least 6 characters.'
+            switch (error.code) {
+                case 'auth/invalid-credential':
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                    description = 'Invalid credentials. Please check your email and password.';
+                    break;
+                case 'auth/email-already-in-use':
+                    description = 'This email is already in use. Please sign in or use a different email.';
+                    break;
+                case 'auth/weak-password':
+                    description = 'Password is too weak. Please use at least 6 characters.';
+                    break;
+                case 'auth/invalid-email':
+                    description = 'The email address is not valid.';
+                    break;
+                default:
+                    description = 'Please check your credentials and try again.';
+                    break;
             }
         }
       toast({
         variant: 'destructive',
-        title: 'Authentication Failed',
+        title: isSigningUp ? 'Sign-Up Failed' : 'Authentication Failed',
         description,
       });
     } finally {
@@ -176,6 +189,20 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+          <div className="mt-4 text-center text-sm text-white/80">
+            {isSigningUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            <Button
+              variant="link"
+              className="p-0 h-auto font-semibold text-white hover:text-white/80"
+              onClick={() => {
+                setIsSigningUp(!isSigningUp);
+                form.reset();
+              }}
+              type="button"
+            >
+              {isSigningUp ? 'Sign In' : 'Sign Up'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </main>
