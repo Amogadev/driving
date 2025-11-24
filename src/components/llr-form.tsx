@@ -69,7 +69,7 @@ const formSchema = z.object({
   taluk: z.string().min(3, { message: "Taluk is required." }),
   district: z.string().min(3, { message: "District is required." }),
   pincode: z.string().regex(/^\d{6}$/, { message: "Pincode must be 6 digits." }),
-  classOfVehicle: z.string().min(2, { message: "Class of vehicle is required." }),
+  classOfVehicle: z.enum(["MCWOG", "LMV", "MCWOG + LMV"], { required_error: "You need to select a class of vehicle." }),
   photo: z.any().refine((files) => files?.length === 1, "Passport photo is required."),
   signature: z.any().refine((files) => files?.length === 1, "Signature image is required."),
   applicationFee: z.number().positive({ message: "Fee must be a positive number." }),
@@ -100,7 +100,6 @@ export function LLRForm() {
       taluk: "",
       district: "",
       pincode: "",
-      classOfVehicle: "",
       applicationFee: 500,
       paymentStatus: "Unpaid",
     },
@@ -465,13 +464,37 @@ export function LLRForm() {
                             control={form.control}
                             name="classOfVehicle"
                             render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="space-y-3">
                                 <FormLabel>Class of Vehicle</FormLabel>
                                 <FormControl>
-                                    <div className="relative">
-                                        <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="e.g., MCWOG, LMV" {...field} className="pl-10"/>
-                                    </div>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-1"
+                                    >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="MCWOG" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                        Motor Cycle Without Gear (MCWOG)
+                                        </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="LMV" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                        Light Motor Vehicle (LMV)
+                                        </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                        <RadioGroupItem value="MCWOG + LMV" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Both</FormLabel>
+                                    </FormItem>
+                                    </RadioGroup>
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
