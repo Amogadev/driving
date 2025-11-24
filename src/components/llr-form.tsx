@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { addDocumentNonBlocking, useAuth } from "@/firebase";
+import { useAuth } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -53,7 +53,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
@@ -157,7 +157,7 @@ export function LLRForm() {
       };
 
       const applicationsCollection = collection(firestore, 'llr_applications');
-      addDocumentNonBlocking(applicationsCollection, applicationData);
+      await addDoc(applicationsCollection, applicationData);
       
       setApplicationId(newApplicationId);
       setSubmitted(true);
