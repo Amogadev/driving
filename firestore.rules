@@ -1,0 +1,119 @@
+/**
+ * This ruleset enforces a strict user-ownership model for a driving school application.
+ * All user-specific data is nested under a user's private document tree, and access is
+ * controlled by the user's unique ID present in the document path.
+ *
+ * Core Philosophy:
+ * Users have complete control over their own data. They can create their user profile and
+ * manage their own related subcollections (like applicant details and document details).
+ * Access by any other user is strictly forbidden.
+ *
+ * Data Structure:
+ * - /users/{userId}: A user's primary profile document.
+ * - /users/{userId}/applicant_details/{applicantDetailsId}: Private details for a user's application.
+ * - /users/{userId}/llr_document_details/{llrDocumentDetailsId}: Private documents for a user's application.
+ * - /llr_applications/{applicationId}: A top-level collection for all LLR applications.
+ *
+ * Key Security Decisions:
+ * - User Isolation: A user can only ever access documents within their own `/users/{userId}` path.
+ * - No User Listing: It is not possible for any user, authenticated or not, to list all documents in the `/users` collection.
+ * - Denormalization for Authorization: The `/llr_applications` collection requires each document to contain an `applicantId` field. This denormalized field is used to grant ownership-based permissions without needing slow, cross-collection lookups. This allows for secure and performant rules.
+ * - Default Deny: Any operation not explicitly granted is denied.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for reusable logic.
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing data ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Ensures an operation is performed by the owner on an existing document.
+     * Prevents modification or deletion of non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document, e.g., `db.collection('users').doc('user_abc').set({ id: 'user_abc', ... })` where auth.uid is 'user_abc'.
+     * @deny (update) User 'user_xyz' trying to update the profile of 'user_abc'.
+     * @principle Enforces Self-Creation and Ownership. A user can create their own document and is the only one who can read or modify it thereafter. Listing all users is denied.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallow listing all user profiles for security.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages a user's private applicant details.
+       * @path /users/{userId}/applicant_details/{applicantDetailsId}
+       * @allow (get) User 'user_abc' retrieving one of their own applicant detail documents.
+       * @deny (list) User 'user_xyz' trying to list applicant details for 'user_abc'.
+       * @principle Restricts access to a user's own data tree. Inherits ownership from the path.
+       */
+      match /applicant_details/{applicantDetailsId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Manages a user's private LLR document details.
+       * @path /users/{userId}/llr_document_details/{llrDocumentDetailsId}
+       * @allow (create) User 'user_abc' adding a new document detail record.
+       * @deny (get) User 'user_xyz' trying to read a document detail record belonging to 'user_abc'.
+       * @principle Restricts access to a user's own data tree. Inherits ownership from the path.
+       */
+      match /llr_document_details/{llrDocumentDetailsId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Manages LLR (Learner's License) applications.
+     * @path /llr_applications/{applicationId}
+     * @allow (create) An authenticated user creating a new application for themselves, e.g., `db.collection('llr_applications').add({ applicantId: 'user_abc', ... })` where auth.uid is 'user_abc'.
+     * @deny (update) User 'user_xyz' trying to modify an application where `resource.data.applicantId` is 'user_abc'.
+     * @principle Enforces document ownership for writes via a denormalized 'applicantId' field. Client queries must filter by this field for list operations to be secure.
+     */
+    match /llr_applications/{applicationId} {
+      // NOTE: For 'list' to be secure, client-side queries MUST use a where clause
+      // like `.where('applicantId', '==', auth.uid)`.
+      allow get, list: if isSignedIn() && resource.data.applicantId == request.auth.uid;
+      
+      // CRITICAL: The document being created MUST have an 'applicantId' field that
+      // matches the creator's user ID.
+      allow create: if isSignedIn() && request.resource.data.applicantId == request.auth.uid;
+      
+      // CRITICAL: The 'applicantId' field must not be changed after creation.
+      allow update: if isExistingOwner(resource.data.applicantId) && request.resource.data.applicantId == resource.data.applicantId;
+      
+      allow delete: if isExistingOwner(resource.data.applicantId);
+    }
+  }
+}
