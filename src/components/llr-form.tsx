@@ -63,7 +63,7 @@ const formSchema = z.object({
   gender: z.enum(["male", "female"], { required_error: "Gender is required." }),
   dob: z.date({ required_error: "A date of birth is required." }),
   bloodGroup: z.string().min(1, { message: "Blood group is required." }),
-  phone: z.string().regex(/^(?:\+91)?[6-9]\d{9}$/, { message: "Please enter a valid 10-digit Indian mobile number." }),
+  phone: z.string().min(1, { message: "Phone number is required." }),
   doorNo: z.string().min(1, { message: "Door number is required." }),
   streetName: z.string().min(3, { message: "Street name is required." }),
   villageOrTown: z.string().min(3, { message: "Village or town is required." }),
@@ -644,3 +644,6 @@ export function LLRForm() {
 
     
 
+
+
+    
