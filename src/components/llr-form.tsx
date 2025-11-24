@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -136,6 +136,8 @@ export function LLRForm() {
           email: user.email,
       }, { merge: true });
 
+      const submittedAtDate = new Date();
+      const paymentDueDate = addDays(submittedAtDate, 15);
 
       const applicationData = {
         applicationId: newApplicationId,
@@ -170,6 +172,7 @@ export function LLRForm() {
         paymentStatus: values.paymentStatus || 'Unpaid',
         status: "Submitted",
         submittedAt: serverTimestamp(),
+        paymentDueDate: format(paymentDueDate, "yyyy-MM-dd"),
       };
 
       const applicationsCollection = collection(firestore, 'llr_applications');
@@ -648,5 +651,7 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
