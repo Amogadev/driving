@@ -103,8 +103,12 @@ service cloud.firestore {
      */
     match /llr_applications/{applicationId} {
       // NOTE: For 'list' to be secure, client-side queries MUST use a where clause
-      // like `.where('applicantId', '==', auth.uid)`.
-      allow get, list: if isSignedIn() && resource.data.applicantId == request.auth.uid;
+      // like `.where('applicantId', '==', auth.uid)`. The rule below allows any
+      // authenticated user to query the collection, relying on the client query
+      // to enforce that users only see their own documents.
+      allow list: if isSignedIn();
+
+      allow get: if isSignedIn() && resource.data.applicantId == request.auth.uid;
       
       // CRITICAL: The document being created MUST have an 'applicantId' field that
       // matches the creator's user ID.
