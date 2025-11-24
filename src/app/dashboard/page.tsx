@@ -16,6 +16,8 @@ import { FilePlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { LLRForm } from '@/components/llr-form';
@@ -96,6 +98,9 @@ export default function DashboardPage() {
                 </Card>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Learner's License Application</DialogTitle>
+                </DialogHeader>
                 <LLRForm />
               </DialogContent>
             </Dialog>
