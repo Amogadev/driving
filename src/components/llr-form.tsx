@@ -54,7 +54,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 
 const formSchema = z.object({
@@ -111,7 +111,7 @@ export function LLRForm() {
   const signatureFileRef = form.register("signature");
 
   async function onSubmit(values: FormValues) {
-    if (!user) {
+    if (!user || !firestore) {
       toast({
         variant: "destructive",
         title: "Authentication Error",
@@ -122,7 +122,10 @@ export function LLRForm() {
     
     setLoading(true);
     try {
-      const newApplicationId = `DW-LLR-${Date.now()}`;
+      const applicationsCollection = collection(firestore, 'llr_applications');
+      const snapshot = await getDocs(applicationsCollection);
+      const appCount = snapshot.size;
+      const newApplicationId = String(appCount + 1).padStart(3, '0');
       
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
@@ -175,7 +178,6 @@ export function LLRForm() {
         paymentDueDate: format(paymentDueDate, "yyyy-MM-dd"),
       };
 
-      const applicationsCollection = collection(firestore, 'llr_applications');
       await addDoc(applicationsCollection, applicationData);
       
       setApplicationId(newApplicationId);
@@ -203,7 +205,6 @@ export function LLRForm() {
         <CardContent className="text-center p-8 pt-0">
           <p className="text-lg">Your Application ID is:</p>
           <p className="text-2xl font-bold text-primary my-2 tracking-wider">{applicationId}</p>
-          <p className="text-muted-foreground text-sm">You will receive updates via email and phone.</p>
           <Button onClick={() => {
               setSubmitted(false);
               setApplicationId("");
@@ -651,7 +652,5 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
 
     
