@@ -128,7 +128,7 @@ export function LLRForm() {
       const applicationsCollection = collection(firestore, 'llr_applications');
       const snapshot = await getDocs(applicationsCollection);
       const appCount = snapshot.size;
-      const newApplicationId = String(appCount + 1).padStart(3, '0');
+      const newApplicationId = `DW-LLR-${String(appCount + 1).padStart(3, '0')}`;
       
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
@@ -141,17 +141,16 @@ export function LLRForm() {
       // Create a new user document for this applicant
       await setDoc(userRef, {
           id: newUserId,
-          username: username,
-          email: values.email, // Use email from the form
+          username: values.fullName,
+          email: values.email,
       });
-
 
       const submittedAtDate = new Date();
       const paymentDueDate = addDays(submittedAtDate, 15);
 
       const applicationData = {
         applicationId: newApplicationId,
-        applicantId: newUserId, // Link application to the new user document ID
+        applicantId: newUserId,
         fullName: values.fullName,
         fatherName: values.fatherName,
         gender: values.gender,
@@ -675,7 +674,5 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
 
     
