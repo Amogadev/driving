@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useFirestore, initiateEmailSignUp } from "@/firebase";
+import { useFirestore, initiateEmailSignUp, useAuth } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,9 @@ import {
   KeyRound,
   CheckCircle,
 } from "lucide-react";
-import { collection, doc, setDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { doc, setDoc } from "firebase/firestore";
 import { FirebaseError } from 'firebase/app';
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 const formSchema = z.object({
@@ -45,6 +44,7 @@ export function CreateAccountForm() {
   const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,21 +56,20 @@ export function CreateAccountForm() {
   });
 
   async function onSubmit(values: FormValues) {
-    if (!firestore) {
+    if (!firestore || !auth) {
       toast({
         variant: "destructive",
-        title: "Database Error",
-        description: "Firestore is not available.",
+        title: "Initialization Error",
+        description: "Firebase services are not available.",
       });
       return;
     }
 
     setLoading(true);
-    const auth = getAuth();
     const email = `${values.username}@drivewise.com`;
 
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, values.password);
+        const userCredential = await initiateEmailSignUp(auth, email, values.password);
         const user = userCredential.user;
 
         const userRef = doc(firestore, 'users', user.uid);
@@ -81,7 +80,8 @@ export function CreateAccountForm() {
             companyName: values.companyName,
         };
         
-        await setDoc(userRef, userData);
+        // Use non-blocking write to Firestore
+        setDocumentNonBlocking(userRef, userData, { merge: true });
         
         setSubmitted(true);
         toast({
