@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "LLRApplication": {
@@ -126,6 +127,10 @@
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Name of the company the user belongs to, if applicable."
         }
       },
       "required": [

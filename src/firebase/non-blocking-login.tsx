@@ -1,9 +1,11 @@
+
 'use client';
 import {
   Auth, // Import Auth type for type hinting
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  UserCredential,
   // Assume getAuth and app are initialized elsewhere
 } from 'firebase/auth';
 
@@ -15,10 +17,10 @@ export function initiateAnonymousSignIn(authInstance: Auth): Promise<void> {
 }
 
 /** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): Promise<void> {
+export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): Promise<UserCredential> {
   // CRITICAL: Call createUserWithEmailAndPassword directly. Do NOT use 'await createUserWithEmailAndPassword(...)'.
   // Return the promise to allow for chaining .catch() for error handling.
-  return createUserWithEmailAndPassword(authInstance, email, password).then(() => {});
+  return createUserWithEmailAndPassword(authInstance, email, password);
 }
 
 /** Initiate email/password sign-in (non-blocking). */

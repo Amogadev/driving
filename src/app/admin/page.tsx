@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { LLRForm } from '@/components/llr-form';
+import { CreateAccountForm } from '@/components/create-account-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,11 +84,11 @@ export default function AdminPage() {
                   Add Account
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Create New LLR Application</DialogTitle>
+                  <DialogTitle>Create Company Account</DialogTitle>
                 </DialogHeader>
-                <LLRForm />
+                <CreateAccountForm />
               </DialogContent>
             </Dialog>
           </div>
