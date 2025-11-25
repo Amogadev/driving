@@ -64,7 +64,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-background">
         <header className="border-b">
           <div className="container mx-auto grid h-16 grid-cols-3 items-center px-4">
-            <h1 className="text-xl font-bold text-primary">Dashboard</h1>
+            <div></div>
             <div className="text-center">
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user?.email?.split('@')[0]}
