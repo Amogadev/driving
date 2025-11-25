@@ -80,7 +80,7 @@ export default function DashboardPage() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <h2 className="text-3xl font-bold mb-8">
+          <h2 className="text-2xl font-bold mb-8">
             Welcome, {user?.displayName || user?.email?.split('@')[0]}!
           </h2>
 
