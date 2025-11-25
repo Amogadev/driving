@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { doc, setDoc } from "firebase/firestore";
 import { FirebaseError } from 'firebase/app';
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 const formSchema = z.object({
@@ -80,8 +79,7 @@ export function CreateAccountForm() {
             companyName: values.companyName,
         };
         
-        // Use non-blocking write to Firestore
-        setDocumentNonBlocking(userRef, userData, { merge: true });
+        await setDoc(userRef, userData, { merge: true });
         
         setSubmitted(true);
         toast({
