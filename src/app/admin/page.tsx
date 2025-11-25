@@ -2,17 +2,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, FileText, IndianRupee, Hourglass } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { Loader2, LogOut, PlusCircle } from 'lucide-react';
+import { useEffect } from 'react';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { collection } from 'firebase/firestore';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { LLRForm } from '@/components/llr-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,88 +40,6 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-}
-
-function AccountStats() {
-    const firestore = useFirestore();
-    const applicationsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'llr_applications');
-    }, [firestore]);
-
-    const { data: applications, isLoading, error } = useCollection(applicationsQuery);
-
-    const stats = useMemo(() => {
-        if (!applications) {
-            return {
-                totalApplications: 0,
-                totalFees: 0,
-                totalPending: 0,
-            };
-        }
-
-        const totalFees = applications.reduce((acc, app) => acc + (app.totalFee || 0), 0);
-        const totalPaid = applications.reduce((acc, app) => acc + (app.paidAmount || 0), 0);
-
-        return {
-            totalApplications: applications.length,
-            totalFees,
-            totalPending: totalFees - totalPaid,
-        };
-    }, [applications]);
-
-    if (isLoading) {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => (
-                    <Card key={i}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        );
-    }
-    
-    if (error) {
-        return <p className="text-destructive">Error loading account details.</p>
-    }
-
-    return (
-         <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalApplications}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Fees Collected</CardTitle>
-                <IndianRupee className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₹{stats.totalFees.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Pending Amount</CardTitle>
-                <Hourglass className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₹{stats.totalPending.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-        </div>
-    )
 }
 
 export default function AdminPage() {
@@ -154,10 +73,26 @@ export default function AdminPage() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <h2 className="text-3xl font-bold mb-8">
-            Account Overview
-          </h2>
-          <AccountStats />
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold">
+              Manage Accounts
+            </h2>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Account
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New LLR Application</DialogTitle>
+                </DialogHeader>
+                <LLRForm />
+              </DialogContent>
+            </Dialog>
+          </div>
+          {/* User list or other admin content can be added here */}
         </main>
       </div>
     </AdminAuthWrapper>
