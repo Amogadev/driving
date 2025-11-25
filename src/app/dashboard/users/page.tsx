@@ -415,6 +415,14 @@ function UserApplicationsList() {
   }, [firestore, user]);
 
   const { data: applications, isLoading, error } = useCollection(applicationsQuery);
+  
+  const userQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users'), where('id', '==', user.uid));
+  }, [firestore, user]);
+
+  const { data: userData } = useCollection(userQuery);
+  const currentUser = userData?.[0];
 
   return (
     <Card>
@@ -423,7 +431,7 @@ function UserApplicationsList() {
         <CardDescription>Here are the details of all your submitted applications.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading && (
+        {(isLoading || isUserLoading) && (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
@@ -434,11 +442,13 @@ function UserApplicationsList() {
             <p className="text-sm text-muted-foreground">Please check your connection or security rules.</p>
           </div>
         )}
-        {!isLoading && !error && (
+        {!isLoading && !isUserLoading && !error && (
           <div className="border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Company Name</TableHead>
                   <TableHead>Application ID</TableHead>
                   <TableHead>Submitted On</TableHead>
                   <TableHead>Status</TableHead>
@@ -451,6 +461,8 @@ function UserApplicationsList() {
                     const pendingAmount = (app.totalFee || 0) - (app.paidAmount || 0);
                     return (
                       <TableRow key={app.id}>
+                         <TableCell>{currentUser?.username || 'N/A'}</TableCell>
+                        <TableCell>{currentUser?.companyName || 'N/A'}</TableCell>
                         <TableCell className="font-medium">{app.applicationId}</TableCell>
                         <TableCell>
                           {app.submittedAt instanceof Timestamp 
@@ -464,7 +476,7 @@ function UserApplicationsList() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       You have not submitted any applications yet.
                     </TableCell>
                   </TableRow>
@@ -513,5 +525,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    
