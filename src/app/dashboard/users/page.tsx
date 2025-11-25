@@ -277,15 +277,21 @@ export default function UsersListPage() {
   }, [firestore]);
 
   const { data: allUsers, isLoading, error } = useCollection(usersQuery);
+  const isAdmin = currentUser?.email === 'admin@drivewise.com';
 
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-
+  
     let usersToShow = allUsers;
-    
-    // Apply search term
-    const searchTermLower = searchTerm.toLowerCase();
-    if (searchTermLower) {
+  
+    // If the user is NOT an admin, filter to show only their own record.
+    if (!isAdmin && currentUser) {
+      usersToShow = allUsers.filter((user) => user.id === currentUser.uid);
+    }
+  
+    // Apply search term if the user is an admin
+    if (isAdmin && searchTerm) {
+      const searchTermLower = searchTerm.toLowerCase();
       return usersToShow.filter((user) =>
         user.username?.toLowerCase().includes(searchTermLower) ||
         user.email?.toLowerCase().includes(searchTermLower)
@@ -293,7 +299,7 @@ export default function UsersListPage() {
     }
     
     return usersToShow;
-  }, [allUsers, searchTerm]);
+  }, [allUsers, searchTerm, isAdmin, currentUser]);
   
   const sortedUsers = useMemo(() => {
     if (!filteredUsers) return [];
@@ -309,8 +315,6 @@ export default function UsersListPage() {
         return 0;
     });
   }, [filteredUsers, sortConfig]);
-
-  const isAdmin = currentUser?.email === 'admin@drivewise.com';
   
   const requestSort = (key: string) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -338,14 +342,14 @@ export default function UsersListPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">Users</h1>
+          <h1 className="text-3xl font-bold">{isAdmin ? 'Users' : 'My Application'}</h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>User Records</CardTitle>
+            <CardTitle>{isAdmin ? 'User Records' : 'My Application Details'}</CardTitle>
             <CardDescription>
-              Browse and manage all registered users.
+              {isAdmin ? 'Browse and manage all registered users.' : 'Here are the details of your latest application.'}
             </CardDescription>
             {isAdmin && (
               <div className="relative pt-4">
@@ -377,8 +381,8 @@ export default function UsersListPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>User ID</TableHead>
-                      <TableHead className={"cursor-pointer"} onClick={() => requestSort('username')}>
-                        <div className="flex items-center">Username {getSortIndicator('username')}</div>
+                      <TableHead className={isAdmin ? "cursor-pointer" : ""} onClick={() => isAdmin && requestSort('username')}>
+                        <div className="flex items-center">Username {isAdmin && getSortIndicator('username')}</div>
                       </TableHead>
                       <TableHead>Application ID</TableHead>
                       <TableHead>Pending Amount</TableHead>

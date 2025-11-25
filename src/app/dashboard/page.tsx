@@ -63,6 +63,8 @@ export default function DashboardPage() {
   const capitalizedUsername = username
     ? username.charAt(0).toUpperCase() + username.slice(1)
     : '';
+  
+  const isAdmin = user?.email === 'admin@drivewise.com';
 
   return (
     <AuthWrapper>
@@ -123,9 +125,9 @@ export default function DashboardPage() {
                       </div>
                   </CardHeader>
                   <CardContent className="text-center">
-                      <CardTitle>View Users</CardTitle>
+                      <CardTitle>{isAdmin ? "View Users" : "View My Application"}</CardTitle>
                       <CardDescription className="mt-2">
-                          View application status and details for all users.
+                          {isAdmin ? "View application status and details for all users." : "View your application status and details."}
                       </CardDescription>
                   </CardContent>
               </Card>
