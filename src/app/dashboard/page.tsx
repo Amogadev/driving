@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, Users } from 'lucide-react';
+import { Loader2, LogOut, Users, User } from 'lucide-react';
 import { useEffect } from 'react';
 import {
   Card,
@@ -119,13 +119,13 @@ export default function DashboardPage() {
               <Card className="w-full h-full cursor-pointer hover:shadow-lg transition-shadow hover:border-primary/50">
                   <CardHeader className="items-center text-center">
                       <div className="p-3 bg-primary/10 rounded-full">
-                          <Users className="h-8 w-8 text-primary" />
+                          <User className="h-8 w-8 text-primary" />
                       </div>
                   </CardHeader>
                   <CardContent className="text-center">
-                      <CardTitle>User List</CardTitle>
+                      <CardTitle>View My Profile</CardTitle>
                       <CardDescription className="mt-2">
-                          View and manage all registered users.
+                          View your application status and details.
                       </CardDescription>
                   </CardContent>
               </Card>

@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import {
   Table,
   TableBody,
@@ -263,32 +263,55 @@ function UserPendingAmount({ userId }: { userId: string }) {
 
 export default function UsersListPage() {
   const firestore = useFirestore();
+  const { user: currentUser, isUserLoading } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'username', direction: 'ascending' });
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const key = sortConfig?.key || 'username';
-    const direction = sortConfig?.direction === 'ascending' ? 'asc' : 'desc';
-    return query(
-      collection(firestore, 'users'),
-      orderBy(key, direction)
-    );
-  }, [firestore, sortConfig]);
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
 
-  const { data: users, isLoading, error } = useCollection(usersQuery);
+  const { data: allUsers, isLoading, error } = useCollection(usersQuery);
 
   const filteredUsers = useMemo(() => {
-    if (!users) return [];
+    if (!allUsers) return [];
+
+    let usersToShow = allUsers;
+
+    // If the user is not an admin, only show their own record
+    if (currentUser && currentUser.email !== 'admin@drivewise.com') {
+      usersToShow = allUsers.filter(user => user.id === currentUser.uid);
+    }
     
-    return users.filter((user) => {
-      const searchTermLower = searchTerm.toLowerCase();
-      return (
+    // Then apply search term
+    const searchTermLower = searchTerm.toLowerCase();
+    if (searchTermLower) {
+      return usersToShow.filter((user) =>
         user.username?.toLowerCase().includes(searchTermLower) ||
         user.email?.toLowerCase().includes(searchTermLower)
       );
+    }
+    
+    return usersToShow;
+  }, [allUsers, searchTerm, currentUser]);
+  
+  const sortedUsers = useMemo(() => {
+    if (!filteredUsers) return [];
+    if (!sortConfig) return filteredUsers;
+
+    return [...filteredUsers].sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
     });
-  }, [users, searchTerm]);
+  }, [filteredUsers, sortConfig]);
+
+  const isAdmin = currentUser?.email === 'admin@drivewise.com';
   
   const requestSort = (key: string) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -305,6 +328,7 @@ export default function UsersListPage() {
     return sortConfig.direction === 'ascending' ? '▲' : '▼';
   };
 
+  const showLoading = isLoading || isUserLoading;
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -315,27 +339,29 @@ export default function UsersListPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">Users</h1>
+          <h1 className="text-3xl font-bold">{isAdmin ? 'Users' : 'My Profile'}</h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>User Records</CardTitle>
+            <CardTitle>{isAdmin ? 'User Records' : 'My Application Details'}</CardTitle>
             <CardDescription>
-              Browse and manage all registered users.
+              {isAdmin ? 'Browse and manage all registered users.' : 'View your application status and payment details.'}
             </CardDescription>
-            <div className="relative pt-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search by username..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 max-w-sm"
-              />
-            </div>
+            {isAdmin && (
+              <div className="relative pt-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by username..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 max-w-sm"
+                />
+              </div>
+            )}
           </CardHeader>
           <CardContent>
-            {isLoading && (
+            {showLoading && (
               <div className="flex justify-center items-center py-20">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
               </div>
@@ -346,14 +372,14 @@ export default function UsersListPage() {
                 <p className="text-sm text-muted-foreground">Please check your internet connection or security rules.</p>
               </div>
             )}
-            {!isLoading && !error && (
+            {!showLoading && !error && (
               <div className="border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>User ID</TableHead>
-                      <TableHead className="cursor-pointer" onClick={() => requestSort('username')}>
-                        <div className="flex items-center">Username {getSortIndicator('username')}</div>
+                      <TableHead className={isAdmin ? "cursor-pointer" : ""} onClick={() => isAdmin && requestSort('username')}>
+                        <div className="flex items-center">Username {isAdmin && getSortIndicator('username')}</div>
                       </TableHead>
                       <TableHead>Application ID</TableHead>
                       <TableHead>Pending Amount</TableHead>
@@ -361,8 +387,8 @@ export default function UsersListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user, index) => (
+                    {sortedUsers.length > 0 ? (
+                      sortedUsers.map((user, index) => (
                         <TableRow key={user.id}>
                           <TableCell>{String(index + 1).padStart(3, '0')}</TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
@@ -397,5 +423,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    
