@@ -93,7 +93,7 @@ function UserDetailsDialog({ userId }: { userId: string }) {
         }).catch((e: any) => {
             const contextualError = new FirestorePermissionError({
                 operation: 'list',
-                path: 'llr_applications',
+                path: `llr_applications`,
             });
             errorEmitter.emit('permission-error', contextualError);
             setError("Failed to fetch payment details.");
@@ -160,18 +160,15 @@ function UserApplicationId({ userId }: { userId: string }) {
             const q = query(
                 llrApplicationsRef,
                 where('applicantId', '==', userId)
-                // The orderBy clause that was causing the error has been removed.
             );
 
             try {
                 const querySnapshot = await getDocs(q);
                 if (!querySnapshot.empty) {
-                    // Manually sort by submittedAt to find the latest
                     const applications = querySnapshot.docs.map(doc => {
                         const data = doc.data();
                         return {
                             ...data,
-                            // Ensure submittedAt is a comparable value (Date object or timestamp number)
                             submittedAt: data.submittedAt instanceof Timestamp ? data.submittedAt.toDate() : new Date(0)
                         };
                     });
@@ -184,8 +181,12 @@ function UserApplicationId({ userId }: { userId: string }) {
                     setApplicationId("N/A");
                 }
             } catch (e) {
-                console.error("Failed to fetch application ID", e);
-                setApplicationId(null); // Indicate error
+                const contextualError = new FirestorePermissionError({
+                    operation: 'list',
+                    path: `llr_applications`,
+                });
+                errorEmitter.emit('permission-error', contextualError);
+                setApplicationId(null);
             } finally {
                 setIsLoading(false);
             }
@@ -225,7 +226,6 @@ function UserPendingAmount({ userId }: { userId: string }) {
         try {
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
-            // Manually sort by submittedAt to find the latest
             const applications = querySnapshot.docs.map(doc => doc.data());
             applications.sort((a, b) => {
                 const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : 0;
@@ -240,8 +240,12 @@ function UserPendingAmount({ userId }: { userId: string }) {
             setPendingAmount(0);
           }
         } catch (e) {
-          console.error("Failed to fetch pending amount", e);
-          setPendingAmount(null); // Indicate error
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: `llr_applications`,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            setPendingAmount(null);
         } finally {
           setIsLoading(false);
         }
@@ -423,3 +427,5 @@ export default function UsersListPage() {
     </div>
   );
 }
+
+    
