@@ -345,6 +345,9 @@ export function LLRForm() {
                                     <PopoverContent className="w-auto p-0" align="start">
                                     <Calendar
                                         mode="single"
+                                        captionLayout="dropdown-buttons"
+                                        fromYear={1900}
+                                        toYear={new Date().getFullYear()}
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         defaultMonth={field.value || new Date(2000, 0)}
@@ -677,9 +680,3 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
-
-    
-
-    
