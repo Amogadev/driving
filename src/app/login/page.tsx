@@ -79,12 +79,21 @@ export default function LoginPage() {
     } catch (error) {
       if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
         // User does not exist, try to create it if it's the special admin user.
-        if (values.username === 'admin' && password === 'admin') {
+        if (values.username === 'admin' && password === 'admin123') {
           try {
             await initiateEmailSignUp(auth, email, password);
             // After successful sign-up, Firebase automatically signs the user in.
             // The onAuthStateChanged listener will pick it up and the useEffect will redirect.
             // No need to call signIn again.
+             try {
+                await initiateEmailSignIn(auth, email, password);
+              } catch (secondSignInError) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Login Failed',
+                  description: 'The admin account exists but login failed. Please check the password.',
+                });
+              }
           } catch (signupError: any) {
             if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
               // This can happen in a race condition. If so, just try to sign in again.
