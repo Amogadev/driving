@@ -136,14 +136,12 @@ export function LLRForm() {
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
       
-      const newUserId = `${values.username?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-      const userRef = doc(firestore, 'users', newUserId);
+      // Update the existing user's document
+      const userRef = doc(firestore, 'users', user.uid);
       const userData = {
-          id: newUserId,
-          username: values.username,
-          email: `${values.username}@drivewise.com`, // Construct email from username
+          username: values.username || user.displayName, // Fallback to existing display name
+          // update other user-specific fields if necessary
       };
-      
       setDocumentNonBlocking(userRef, userData, { merge: true });
 
       const submittedAtDate = new Date();
@@ -151,14 +149,14 @@ export function LLRForm() {
 
       const applicationData = {
         applicationId: newApplicationId,
-        applicantId: newUserId,
-        fullName: values.username, // Using username as fullName
+        applicantId: user.uid, // Use the UID of the currently logged-in user
+        fullName: values.username,
         fatherName: values.fatherName,
         gender: values.gender,
         dob: values.dob ? format(values.dob, "yyyy-MM-dd") : null,
         bloodGroup: values.bloodGroup,
         phone: values.phone,
-        email: values.email, // Contact email
+        email: values.email,
         address: {
             doorNo: values.doorNo,
             streetName: values.streetName,
@@ -680,3 +678,5 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
