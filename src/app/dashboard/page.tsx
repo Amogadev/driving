@@ -85,7 +85,7 @@ export default function DashboardPage() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <h2 className="text-2xl font-bold mb-8">
+          <h2 className="text-xl font-bold mb-8">
             Welcome, {user?.displayName || capitalizedUsername}!
           </h2>
 
