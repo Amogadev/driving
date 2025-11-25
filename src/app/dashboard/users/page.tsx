@@ -282,13 +282,8 @@ export default function UsersListPage() {
     if (!allUsers) return [];
 
     let usersToShow = allUsers;
-
-    // If the user is not an admin, only show their own record
-    if (currentUser && currentUser.email !== 'admin@drivewise.com') {
-      usersToShow = allUsers.filter(user => user.id === currentUser.uid);
-    }
     
-    // Then apply search term
+    // Apply search term
     const searchTermLower = searchTerm.toLowerCase();
     if (searchTermLower) {
       return usersToShow.filter((user) =>
@@ -298,7 +293,7 @@ export default function UsersListPage() {
     }
     
     return usersToShow;
-  }, [allUsers, searchTerm, currentUser]);
+  }, [allUsers, searchTerm]);
   
   const sortedUsers = useMemo(() => {
     if (!filteredUsers) return [];
@@ -343,14 +338,14 @@ export default function UsersListPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">{isAdmin ? 'Users' : 'My Profile'}</h1>
+          <h1 className="text-3xl font-bold">Users</h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{isAdmin ? 'User Records' : 'My Application Details'}</CardTitle>
+            <CardTitle>User Records</CardTitle>
             <CardDescription>
-              {isAdmin ? 'Browse and manage all registered users.' : 'View your application status and payment details.'}
+              Browse and manage all registered users.
             </CardDescription>
             {isAdmin && (
               <div className="relative pt-4">
@@ -382,8 +377,8 @@ export default function UsersListPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>User ID</TableHead>
-                      <TableHead className={isAdmin ? "cursor-pointer" : ""} onClick={() => isAdmin && requestSort('username')}>
-                        <div className="flex items-center">Username {isAdmin && getSortIndicator('username')}</div>
+                      <TableHead className={"cursor-pointer"} onClick={() => requestSort('username')}>
+                        <div className="flex items-center">Username {getSortIndicator('username')}</div>
                       </TableHead>
                       <TableHead>Application ID</TableHead>
                       <TableHead>Pending Amount</TableHead>
@@ -427,5 +422,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    
