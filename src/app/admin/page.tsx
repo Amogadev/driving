@@ -143,7 +143,7 @@ function UserList() {
                                         <TableCell className="font-medium">{user.username}</TableCell>
                                         <TableCell>{user.companyName}</TableCell>
                                         <TableCell>
-                                            {user.lastLogin && user.lastLogin.toDate
+                                            {user.lastLogin instanceof Timestamp
                                                 ? format(user.lastLogin.toDate(), "PPpp")
                                                 : "Never"}
                                         </TableCell>
