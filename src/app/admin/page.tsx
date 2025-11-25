@@ -4,8 +4,8 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, PlusCircle } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { Loader2, LogOut, PlusCircle, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { CreateAccountForm } from '@/components/create-account-form';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -24,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +66,8 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
 
 function UserList() {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -65,6 +79,24 @@ function UserList() {
     }, [firestore]);
 
     const { data: users, isLoading, error } = useCollection(usersQuery);
+
+    const handleDeleteUser = async (userId: string) => {
+        if (!firestore) {
+            toast({ variant: "destructive", title: "Error", description: "Firestore is not available." });
+            return;
+        }
+        setIsDeleting(userId);
+        try {
+            await deleteDoc(doc(firestore, "users", userId));
+            toast({ title: "User Deleted", description: "The user account has been successfully removed." });
+        } catch (e: any) {
+            console.error("Error deleting user:", e);
+            toast({ variant: "destructive", title: "Deletion Failed", description: e.message });
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
 
     if (isLoading) {
         return (
@@ -99,6 +131,7 @@ function UserList() {
                                 <TableHead>Username</TableHead>
                                 <TableHead>Company Name</TableHead>
                                 <TableHead>Last Login</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -108,11 +141,35 @@ function UserList() {
                                         <TableCell className="font-medium">{user.username}</TableCell>
                                         <TableCell>{user.companyName}</TableCell>
                                         <TableCell>{"N/A"}</TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" disabled={isDeleting === user.id}>
+                                                        {isDeleting === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive/70" />}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the user account
+                                                        and remove their data from our servers.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="bg-destructive hover:bg-destructive/90">
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center">
+                                    <TableCell colSpan={4} className="h-24 text-center">
                                         No user accounts found.
                                     </TableCell>
                                 </TableRow>

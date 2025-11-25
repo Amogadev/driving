@@ -33,6 +33,13 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    
+    /**
+     * Checks if the authenticated user is the admin.
+     */
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'admin@drivewise.com';
+    }
 
     /**
      * Checks if the currently authenticated user's UID matches the provided userId.
@@ -57,11 +64,11 @@ service cloud.firestore {
      * - Principle: Allows creation by any signed-in user but restricts read/modify to the owner. Listing all users is allowed for authenticated users.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isOwner(userId) || isAdmin();
       allow list: if isSignedIn();
       allow create: if isSignedIn(); // Allow any authenticated user to create a new user
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId) || isAdmin();
 
       /**
        * Description: Manages a user's private applicant details at path /users/{userId}/applicant_details/{applicantDetailsId}.
