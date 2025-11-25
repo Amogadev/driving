@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, getDocs, Timestamp, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import {
   Table,
   TableBody,
@@ -416,13 +416,12 @@ function UserApplicationsList() {
 
   const { data: applications, isLoading, error } = useCollection(applicationsQuery);
   
-  const userQuery = useMemoFirebase(() => {
+  const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'users'), where('id', '==', user.uid));
+    return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userData } = useCollection(userQuery);
-  const currentUser = userData?.[0];
+  const { data: currentUser, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
   return (
     <Card>
@@ -431,7 +430,7 @@ function UserApplicationsList() {
         <CardDescription>Here are the details of all your submitted applications.</CardDescription>
       </CardHeader>
       <CardContent>
-        {(isLoading || isUserLoading) && (
+        {(isLoading || isUserLoading || isUserDocLoading) && (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
