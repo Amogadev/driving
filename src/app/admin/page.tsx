@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, FileText, IndianRupee, Hourglass } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
@@ -43,7 +43,7 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
 
 function AccountStats() {
     const firestore = useFirestore();
-    const applicationsQuery = useMemo(() => {
+    const applicationsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return collection(firestore, 'llr_applications');
     }, [firestore]);
@@ -129,7 +129,9 @@ export default function AdminPage() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await auth.signOut();
+    if (auth) {
+        await auth.signOut();
+    }
     router.push('/login');
   };
 
@@ -161,5 +163,3 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    
