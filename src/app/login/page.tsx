@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -77,7 +78,9 @@ export default function LoginPage() {
                         try {
                             // If the special user doesn't exist, create it and then sign in.
                             await initiateEmailSignUp(auth, values.email, values.password);
-                            // The onAuthStateChanged listener in useUser will handle the redirect.
+                            // After sign-up, immediately try to sign in again.
+                            // The onAuthStateChanged listener in useUser will then handle the redirect.
+                            await initiateEmailSignIn(auth, values.email, values.password);
                         } catch (signupError) {
                             toast({
                                 variant: 'destructive',
