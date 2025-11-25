@@ -146,6 +146,54 @@ function UserDetailsDialog({ userId }: { userId: string }) {
     );
 }
 
+function UserApplicationId({ userId }: { userId: string }) {
+    const firestore = useFirestore();
+    const [applicationId, setApplicationId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!firestore || !userId) return;
+
+        const fetchAppId = async () => {
+            setIsLoading(true);
+            const llrApplicationsRef = collection(firestore, 'llr_applications');
+            const q = query(
+                llrApplicationsRef,
+                where('applicantId', '==', userId),
+                orderBy('submittedAt', 'desc'),
+                limit(1)
+            );
+
+            try {
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const latestApplication = querySnapshot.docs[0].data();
+                    setApplicationId(latestApplication.applicationId);
+                } else {
+                    setApplicationId("N/A");
+                }
+            } catch (e) {
+                console.error("Failed to fetch application ID", e);
+                setApplicationId(null); // Indicate error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAppId();
+    }, [firestore, userId]);
+
+    if (isLoading) {
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+
+    if (applicationId === null) {
+        return <span className="text-destructive">Error</span>;
+    }
+
+    return <span>{applicationId}</span>;
+}
+
 
 function UserPendingAmount({ userId }: { userId: string }) {
     const firestore = useFirestore();
@@ -296,6 +344,7 @@ export default function UsersListPage() {
                       <TableHead className="cursor-pointer" onClick={() => requestSort('username')}>
                         <div className="flex items-center">Username {getSortIndicator('username')}</div>
                       </TableHead>
+                      <TableHead>Application ID</TableHead>
                       <TableHead>Pending Amount</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -307,6 +356,9 @@ export default function UsersListPage() {
                           <TableCell>{String(index + 1).padStart(3, '0')}</TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
                           <TableCell>
+                            <UserApplicationId userId={user.id} />
+                          </TableCell>
+                          <TableCell>
                             <UserPendingAmount userId={user.id} />
                           </TableCell>
                           <TableCell className="text-right">
@@ -317,7 +369,7 @@ export default function UsersListPage() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={5}
                           className="h-24 text-center"
                         >
                           No users found.
