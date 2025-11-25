@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
   Table,
@@ -159,15 +159,26 @@ function UserApplicationId({ userId }: { userId: string }) {
             const llrApplicationsRef = collection(firestore, 'llr_applications');
             const q = query(
                 llrApplicationsRef,
-                where('applicantId', '==', userId),
-                orderBy('submittedAt', 'desc'),
-                limit(1)
+                where('applicantId', '==', userId)
+                // The orderBy clause that was causing the error has been removed.
             );
 
             try {
                 const querySnapshot = await getDocs(q);
                 if (!querySnapshot.empty) {
-                    const latestApplication = querySnapshot.docs[0].data();
+                    // Manually sort by submittedAt to find the latest
+                    const applications = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            ...data,
+                            // Ensure submittedAt is a comparable value (Date object or timestamp number)
+                            submittedAt: data.submittedAt instanceof Timestamp ? data.submittedAt.toDate() : new Date(0)
+                        };
+                    });
+
+                    applications.sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime());
+                    
+                    const latestApplication = applications[0];
                     setApplicationId(latestApplication.applicationId);
                 } else {
                     setApplicationId("N/A");
