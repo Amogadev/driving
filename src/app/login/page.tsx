@@ -72,70 +72,74 @@ export default function LoginPage() {
     setIsSubmitting(true);
     const email = `${values.username}@drivewise.com`;
     const password = values.password;
-
+  
     try {
       await initiateEmailSignIn(auth, email, password);
+      // Successful sign-in will trigger the useEffect to redirect.
     } catch (error) {
-      if (error instanceof FirebaseError) {
-        const isSpecialUser = values.username === 'admin';
-        const specialUserPassword = 'admin';
-
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-          if (isSpecialUser && password === specialUserPassword) {
-            try {
-              await initiateEmailSignUp(auth, email, specialUserPassword);
-            } catch (signupError: any) {
-              if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
-                try {
-                  await initiateEmailSignIn(auth, email, specialUserPassword);
-                } catch (secondSignInError) {
-                   toast({
-                      variant: 'destructive',
-                      title: 'Login Failed',
-                      description: 'Please check your credentials and try again.',
-                   });
-                }
-              } else {
+      if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+        // User does not exist, try to create it if it's the special admin user.
+        if (values.username === 'admin' && password === 'admin') {
+          try {
+            await initiateEmailSignUp(auth, email, password);
+            // After successful sign-up, Firebase automatically signs the user in.
+            // The onAuthStateChanged listener will pick it up and the useEffect will redirect.
+            // No need to call signIn again.
+          } catch (signupError: any) {
+            if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
+              // This can happen in a race condition. If so, just try to sign in again.
+              try {
+                await initiateEmailSignIn(auth, email, password);
+              } catch (secondSignInError) {
                 toast({
                   variant: 'destructive',
-                  title: 'Setup Failed',
-                  description: 'Could not create the default admin account.',
+                  title: 'Login Failed',
+                  description: 'The admin account exists but login failed. Please check the password.',
                 });
               }
+            } else {
+              toast({
+                variant: 'destructive',
+                title: 'Admin Setup Failed',
+                description: 'Could not create the default admin account.',
+              });
             }
-          } else {
+          }
+        } else {
+          // It's a regular user that doesn't exist.
+          toast({
+            variant: 'destructive',
+            title: 'Authentication Failed',
+            description: 'Invalid username or password.',
+          });
+        }
+      } else if (error instanceof FirebaseError) {
+        // Handle other Firebase errors
+        switch (error.code) {
+          case 'auth/wrong-password':
             toast({
               variant: 'destructive',
               title: 'Authentication Failed',
-              description: 'Invalid credentials. Please try again.',
+              description: 'Incorrect password. Please try again.',
             });
-          }
-        } else {
-          switch (error.code) {
-            case 'auth/wrong-password':
-              toast({
-                variant: 'destructive',
-                title: 'Authentication Failed',
-                description: 'Incorrect password. Please try again.',
-              });
-              break;
-            case 'auth/too-many-requests':
-               toast({
-                variant: 'destructive',
-                title: 'Too Many Attempts',
-                description: 'Access to this account has been temporarily disabled. Please try again later.',
-              });
-              break;
-            default:
-              toast({
-                variant: 'destructive',
-                title: 'Authentication Failed',
-                description: error.message || 'An unexpected error occurred.',
-              });
-              break;
-          }
+            break;
+          case 'auth/too-many-requests':
+            toast({
+              variant: 'destructive',
+              title: 'Too Many Attempts',
+              description: 'Access to this account has been temporarily disabled. Please try again later.',
+            });
+            break;
+          default:
+            toast({
+              variant: 'destructive',
+              title: 'Authentication Failed',
+              description: error.message || 'An unexpected error occurred.',
+            });
+            break;
         }
       } else {
+        // Handle non-Firebase errors
         toast({
           variant: 'destructive',
           title: 'Error',
