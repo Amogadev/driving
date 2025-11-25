@@ -125,9 +125,9 @@ export default function DashboardPage() {
                       </div>
                   </CardHeader>
                   <CardContent className="text-center">
-                      <CardTitle>{isAdmin ? "View Users" : "View My Application"}</CardTitle>
+                      <CardTitle>{isAdmin ? "View Users" : "View My Applications"}</CardTitle>
                       <CardDescription className="mt-2">
-                          {isAdmin ? "View application status and details for all users." : "View your application status and details."}
+                          {isAdmin ? "View application status and details for all users." : "View your application history."}
                       </CardDescription>
                   </CardContent>
               </Card>
@@ -138,3 +138,5 @@ export default function DashboardPage() {
     </AuthWrapper>
   );
 }
+
+    
