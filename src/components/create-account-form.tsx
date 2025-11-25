@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useFirestore, initiateEmailSignUp, useAuth } from "@/firebase";
+import { useFirestore, initiateEmailSignUp, initiateEmailSignIn, useAuth } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -63,47 +63,75 @@ export function CreateAccountForm() {
       });
       return;
     }
-
+  
     setLoading(true);
     const email = `${values.username}@drivewise.com`;
-
+  
     try {
-        const userCredential = await initiateEmailSignUp(auth, email, values.password);
-        const user = userCredential.user;
-
-        const userRef = doc(firestore, 'users', user.uid);
-        const userData = {
+      // First, try to sign in. This checks if the user already exists.
+      await initiateEmailSignIn(auth, email, values.password);
+      // If sign-in succeeds, the user already exists.
+      toast({
+        title: "User Already Exists",
+        description: `An account with the username "${values.username}" already exists.`,
+      });
+      // We might want to sign them out again if we are in an admin flow
+      await auth.signOut();
+    } catch (signInError: any) {
+      // If sign-in fails because the user is not found, we can proceed to create it.
+      if (signInError instanceof FirebaseError && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
+        try {
+          const userCredential = await initiateEmailSignUp(auth, email, values.password);
+          const user = userCredential.user;
+  
+          const userRef = doc(firestore, 'users', user.uid);
+          const userData = {
             id: user.uid,
             username: values.username,
             email: email,
             companyName: values.companyName,
-        };
-        
-        await setDoc(userRef, userData, { merge: true });
-        
-        setSubmitted(true);
-        toast({
+          };
+          
+          await setDoc(userRef, userData, { merge: true });
+          
+          setSubmitted(true);
+          toast({
             title: "Account Created",
             description: `User ${values.username} has been created successfully.`,
-        });
+          });
 
-    } catch (error: any) {
-        console.error("Error creating account: ", error);
-        let description = "Could not create the account. Please try again.";
-        if (error instanceof FirebaseError) {
-            if (error.code === 'auth/email-already-in-use') {
-                description = "This username is already taken. Please choose another one.";
-            } else if (error.code === 'auth/weak-password') {
-                description = "The password is too weak. Please choose a stronger password.";
+          // After creating, sign them out of the current session so admin remains logged in
+          if (auth.currentUser?.email !== 'admin@drivewise.com') {
+             await auth.signOut();
+             // You may need to re-authenticate the admin here if this action signs them out.
+             // This part of the logic depends on session management strategy.
+             // For now, we assume the admin might need to log in again if their session is affected.
+          }
+
+        } catch (signUpError: any) {
+          console.error("Error creating account: ", signUpError);
+          let description = "Could not create the account. Please try again.";
+          if (signUpError instanceof FirebaseError) {
+            if (signUpError.code === 'auth/weak-password') {
+              description = "The password is too weak. Please choose a stronger password.";
             }
-        }
-        toast({
+          }
+          toast({
             variant: "destructive",
             title: "Creation Failed",
             description: description,
+          });
+        }
+      } else {
+        // Another sign-in error occurred (e.g., wrong password for existing user)
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "An account with this username exists, but the password was incorrect.",
         });
+      }
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }
 
