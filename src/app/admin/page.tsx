@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CreateAccountForm } from '@/components/create-account-form';
-import { collection, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -36,6 +36,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -140,7 +142,11 @@ function UserList() {
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.username}</TableCell>
                                         <TableCell>{user.companyName}</TableCell>
-                                        <TableCell>{"N/A"}</TableCell>
+                                        <TableCell>
+                                            {user.lastLogin && user.lastLogin instanceof Timestamp 
+                                                ? format(user.lastLogin.toDate(), "PPpp")
+                                                : "Never"}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>

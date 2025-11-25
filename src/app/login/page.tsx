@@ -29,11 +29,13 @@ import {
   initiateEmailSignUp,
   useAuth,
   useUser,
+  useFirestore,
 } from '@/firebase';
 import { Loader2, LogIn, Eye, EyeOff, User as UserIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +47,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,43 +62,57 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-        if (user.email === 'admin@drivewise.com') {
+    if (!isUserLoading && user && firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true })
+        .catch((error) => {
+          console.error('Failed to update last login:', error);
+        })
+        .finally(() => {
+          if (user.email === 'admin@drivewise.com') {
             router.push('/admin');
-        } else {
+          } else {
             router.push('/dashboard');
-        }
+          }
+        });
+    } else if (!isUserLoading && !user) {
+      // User is not logged in, do nothing. The form is available.
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, firestore]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     const email = `${values.username}@drivewise.com`;
     const password = values.password;
-  
+
     try {
       await initiateEmailSignIn(auth, email, password);
-      // Successful sign-in will trigger the useEffect to redirect.
+      // On successful sign-in, the useEffect hook will handle the redirect and timestamp update.
     } catch (error) {
-      if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
-        // User does not exist, try to create it if it's the special admin user.
+      if (
+        error instanceof FirebaseError &&
+        (error.code === 'auth/user-not-found' ||
+          error.code === 'auth/invalid-credential')
+      ) {
         if (values.username === 'admin' && password === 'admin123') {
           try {
-            await initiateEmailSignUp(auth, email, password);
-            // After successful sign-up, Firebase automatically signs the user in.
-            // The onAuthStateChanged listener will pick it up and the useEffect will redirect.
-            // No need to call signIn again.
-             try {
-                await initiateEmailSignIn(auth, email, password);
-              } catch (secondSignInError) {
-                toast({
-                  variant: 'destructive',
-                  title: 'Login Failed',
-                  description: 'The admin account exists but login failed. Please check the password.',
-                });
-              }
+            const userCredential = await initiateEmailSignUp(auth, email, password);
+            const adminUser = userCredential.user;
+             if (firestore) {
+              const userRef = doc(firestore, 'users', adminUser.uid);
+              await setDoc(userRef, {
+                id: adminUser.uid,
+                username: 'admin',
+                email: adminUser.email,
+                lastLogin: serverTimestamp(),
+              }, { merge: true });
+            }
+            // After sign-up, the auth state change will be detected by useEffect and redirect.
           } catch (signupError: any) {
-            if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
+            if (
+              signupError instanceof FirebaseError &&
+              signupError.code === 'auth/email-already-in-use'
+            ) {
               // This can happen in a race condition. If so, just try to sign in again.
               try {
                 await initiateEmailSignIn(auth, email, password);
@@ -103,7 +120,8 @@ export default function LoginPage() {
                 toast({
                   variant: 'destructive',
                   title: 'Login Failed',
-                  description: 'The admin account exists but login failed. Please check the password.',
+                  description:
+                    'The admin account exists but login failed. Please check the password.',
                 });
               }
             } else {
@@ -115,7 +133,6 @@ export default function LoginPage() {
             }
           }
         } else {
-          // It's a regular user that doesn't exist.
           toast({
             variant: 'destructive',
             title: 'Authentication Failed',
@@ -123,7 +140,6 @@ export default function LoginPage() {
           });
         }
       } else if (error instanceof FirebaseError) {
-        // Handle other Firebase errors
         switch (error.code) {
           case 'auth/wrong-password':
             toast({
@@ -136,7 +152,8 @@ export default function LoginPage() {
             toast({
               variant: 'destructive',
               title: 'Too Many Attempts',
-              description: 'Access to this account has been temporarily disabled. Please try again later.',
+              description:
+                'Access to this account has been temporarily disabled. Please try again later.',
             });
             break;
           default:
@@ -148,7 +165,6 @@ export default function LoginPage() {
             break;
         }
       } else {
-        // Handle non-Firebase errors
         toast({
           variant: 'destructive',
           title: 'Error',
