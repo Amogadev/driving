@@ -25,11 +25,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   initiateEmailSignIn,
-  initiateEmailSignUp,
   useAuth,
   useUser,
 } from '@/firebase';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
@@ -47,7 +46,6 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSigningUp, setIsSigningUp] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,19 +64,8 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      if (isSigningUp) {
-        await initiateEmailSignUp(auth, values.email, values.password);
-        toast({
-          title: 'Account Created!',
-          description:
-            'Your account has been created. Please sign in.',
-        });
-        setIsSigningUp(false); // Switch to sign in mode
-        form.reset();
-      } else {
-        await initiateEmailSignIn(auth, values.email, values.password);
-        // The useEffect will handle the redirect on successful login
-      }
+      await initiateEmailSignIn(auth, values.email, values.password);
+      // The useEffect will handle the redirect on successful login
     } catch (error: any) {
         let description = 'An unexpected error occurred. Please try again.';
         if (error instanceof FirebaseError) {
@@ -87,16 +74,10 @@ export default function LoginPage() {
                     description = 'Invalid credentials. Please check your email and password.';
                     break;
                 case 'auth/user-not-found':
-                    description = 'No account found with this email. Please sign up.';
+                    description = 'No account found with this email.';
                     break;
                 case 'auth/wrong-password':
                     description = 'Incorrect password. Please try again.';
-                    break;
-                case 'auth/email-already-in-use':
-                    description = 'This email is already in use. Please sign in or use a different email.';
-                    break;
-                case 'auth/weak-password':
-                    description = 'Password is too weak. Please use at least 6 characters.';
                     break;
                 case 'auth/invalid-email':
                     description = 'The email address is not valid.';
@@ -108,7 +89,7 @@ export default function LoginPage() {
         }
       toast({
         variant: 'destructive',
-        title: isSigningUp ? 'Sign-Up Failed' : 'Authentication Failed',
+        title: 'Authentication Failed',
         description,
       });
     } finally {
@@ -136,12 +117,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm border-0 shadow-lg bg-transparent backdrop-blur-sm text-white">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            {isSigningUp ? 'Create an Account' : 'Welcome Back!'}
+            Welcome Back!
           </CardTitle>
           <CardDescription className="text-white/80">
-            {isSigningUp
-              ? 'Enter your details to create a new account.'
-              : 'Sign in to access your dashboard.'}
+            Login to access your dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,29 +165,13 @@ export default function LoginPage() {
               <Button type="submit" className="w-full bg-primary/80 hover:bg-primary text-white" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : isSigningUp ? (
-                  <UserPlus />
                 ) : (
                   <LogIn />
                 )}
-                {isSigningUp ? 'Sign Up' : 'Sign In'}
+                Login
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm text-white/80">
-            {isSigningUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <Button
-              variant="link"
-              className="p-0 h-auto font-semibold text-white hover:text-white/80"
-              onClick={() => {
-                setIsSigningUp(!isSigningUp);
-                form.reset({ email: 'abc@gmail.com', password: 'abc@123' });
-              }}
-              type="button"
-            >
-              {isSigningUp ? 'Sign In' : 'Sign Up'}
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </main>
