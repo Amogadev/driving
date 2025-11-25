@@ -52,8 +52,8 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: 'admin123',
+      email: 'abc@gmail.com',
+      password: 'abc@123',
     },
   });
 
@@ -202,7 +202,7 @@ export default function LoginPage() {
               className="p-0 h-auto font-semibold text-white hover:text-white/80"
               onClick={() => {
                 setIsSigningUp(!isSigningUp);
-                form.reset({ email: '', password: 'admin123' });
+                form.reset({ email: 'abc@gmail.com', password: 'abc@123' });
               }}
               type="button"
             >
