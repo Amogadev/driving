@@ -71,7 +71,7 @@ export default function DashboardPage() {
           <div className="container mx-auto grid h-16 grid-cols-3 items-center px-4">
             <div></div>
             <div className="text-center">
-              <span className="text-xl font-semibold text-foreground hidden sm:inline">
+              <span className="text-2xl font-semibold text-foreground hidden sm:inline">
                 {capitalizedUsername}
               </span>
             </div>
