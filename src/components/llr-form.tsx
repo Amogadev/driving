@@ -62,25 +62,25 @@ import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-b
 
 
 const formSchema = z.object({
-  username: z.string().min(2, { message: "Username must be at least 2 characters." }),
-  fatherName: z.string().min(2, { message: "Father's name must be at least 2 characters." }),
-  email: z.string().email({ message: "Please enter a valid email." }),
-  gender: z.enum(["male", "female"], { required_error: "Gender is required." }),
-  dob: z.date({ required_error: "A date of birth is required." }),
-  bloodGroup: z.string().min(1, { message: "Blood group is required." }),
-  phone: z.string().min(1, { message: "Phone number is required." }),
-  doorNo: z.string().min(1, { message: "Door number is required." }),
-  streetName: z.string().min(3, { message: "Street name is required." }),
-  villageOrTown: z.string().min(3, { message: "Village or town is required." }),
-  taluk: z.string().min(3, { message: "Taluk is required." }),
-  district: z.string().min(3, { message: "District is required." }),
-  pincode: z.string().regex(/^\d{6}$/, { message: "Pincode must be 6 digits." }),
-  classOfVehicle: z.enum(["MCWOG", "LMV", "MCWOG + LMV"], { required_error: "You need to select a class of vehicle." }),
+  username: z.string().optional(),
+  fatherName: z.string().optional(),
+  email: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
+  gender: z.enum(["male", "female"]).optional(),
+  dob: z.date().optional(),
+  bloodGroup: z.string().optional(),
+  phone: z.string().optional(),
+  doorNo: z.string().optional(),
+  streetName: z.string().optional(),
+  villageOrTown: z.string().optional(),
+  taluk: z.string().optional(),
+  district: z.string().optional(),
+  pincode: z.string().regex(/^\d{6}$/, { message: "Pincode must be 6 digits." }).optional().or(z.literal('')),
+  classOfVehicle: z.enum(["MCWOG", "LMV", "MCWOG + LMV"]).optional(),
   photo: z.any().optional(),
   signature: z.any().optional(),
-  totalFee: z.number().positive({ message: "Fee must be a positive number." }),
-  paidAmount: z.number().nonnegative({ message: "Paid amount cannot be negative." }),
-  paymentStatus: z.enum(["Paid", "Unpaid"], { required_error: "Payment status is required." }),
+  totalFee: z.number().positive({ message: "Fee must be a positive number." }).optional(),
+  paidAmount: z.number().nonnegative({ message: "Paid amount cannot be negative." }).optional(),
+  paymentStatus: z.enum(["Paid", "Unpaid"]).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -136,7 +136,7 @@ export function LLRForm() {
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
       
-      const newUserId = `${values.username.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      const newUserId = `${values.username?.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       const userRef = doc(firestore, 'users', newUserId);
       const userData = {
           id: newUserId,
@@ -155,7 +155,7 @@ export function LLRForm() {
         fullName: values.username, // Using username as fullName
         fatherName: values.fatherName,
         gender: values.gender,
-        dob: format(values.dob, "yyyy-MM-dd"),
+        dob: values.dob ? format(values.dob, "yyyy-MM-dd") : null,
         bloodGroup: values.bloodGroup,
         phone: values.phone,
         email: values.email, // Contact email
@@ -347,12 +347,9 @@ export function LLRForm() {
                                         mode="single"
                                         selected={field.value}
                                         onSelect={field.onChange}
-                                        disabled={(date) =>
-                                        date > new Date(new Date().setFullYear(new Date().getFullYear() - 18)) || date < new Date("1920-01-01")
-                                        }
                                         captionLayout="dropdown-buttons"
                                         fromYear={1920}
-                                        toYear={new Date().getFullYear() - 18}
+                                        toYear={2030}
                                     />
                                     </PopoverContent>
                                 </Popover>
@@ -597,6 +594,7 @@ export function LLRForm() {
                                             {...field} 
                                             className="pl-10 font-bold" 
                                             onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                                            value={field.value ?? ''}
                                         />
                                     </div>
                                 </FormControl>
@@ -618,6 +616,7 @@ export function LLRForm() {
                                             {...field} 
                                             className="pl-10 font-bold" 
                                             onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                                            value={field.value ?? ''}
                                         />
                                     </div>
                                 </FormControl>
@@ -676,3 +675,5 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
