@@ -59,6 +59,11 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
+  const username = user?.email?.split('@')[0];
+  const capitalizedUsername = username
+    ? username.charAt(0).toUpperCase() + username.slice(1)
+    : '';
+
   return (
     <AuthWrapper>
       <div className="min-h-screen bg-background">
@@ -67,7 +72,7 @@ export default function DashboardPage() {
             <div></div>
             <div className="text-center">
               <span className="text-lg font-semibold text-foreground hidden sm:inline">
-                {user?.email?.split('@')[0]}
+                {capitalizedUsername}
               </span>
             </div>
             <div className="flex items-center justify-end gap-4">
@@ -81,7 +86,7 @@ export default function DashboardPage() {
 
         <main className="container mx-auto px-4 py-8">
           <h2 className="text-2xl font-bold mb-8">
-            Welcome, {user?.displayName || user?.email?.split('@')[0]}!
+            Welcome, {user?.displayName || capitalizedUsername}!
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-center">
