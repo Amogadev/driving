@@ -62,7 +62,7 @@ import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-b
 
 
 const formSchema = z.object({
-  fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters." }),
   fatherName: z.string().min(2, { message: "Father's name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   gender: z.enum(["male", "female"], { required_error: "Gender is required." }),
@@ -96,7 +96,7 @@ export function LLRForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
+      username: "",
       fatherName: "",
       email: "",
       bloodGroup: "",
@@ -136,15 +136,15 @@ export function LLRForm() {
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
       
-      const newUserId = `${values.fullName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      const newUserId = `${values.username.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       const userRef = doc(firestore, 'users', newUserId);
       const userData = {
           id: newUserId,
-          username: values.fullName,
-          email: values.email,
+          username: values.username,
+          email: `${values.username}@drivewise.com`, // Construct email from username
       };
       
-      setDocumentNonBlocking(userRef, userData, {});
+      setDocumentNonBlocking(userRef, userData, { merge: true });
 
       const submittedAtDate = new Date();
       const paymentDueDate = addDays(submittedAtDate, 15);
@@ -152,12 +152,13 @@ export function LLRForm() {
       const applicationData = {
         applicationId: newApplicationId,
         applicantId: newUserId,
-        fullName: values.fullName,
+        fullName: values.username, // Using username as fullName
         fatherName: values.fatherName,
         gender: values.gender,
         dob: format(values.dob, "yyyy-MM-dd"),
         bloodGroup: values.bloodGroup,
         phone: values.phone,
+        email: values.email, // Contact email
         address: {
             doorNo: values.doorNo,
             streetName: values.streetName,
@@ -240,10 +241,10 @@ export function LLRForm() {
                     <CardContent className="grid md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
-                            name="fullName"
+                            name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Name</FormLabel>
+                                <FormLabel>Username</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -275,7 +276,7 @@ export function LLRForm() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>Contact Email</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -675,7 +676,3 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
-
-    

@@ -15,7 +15,7 @@ export default function Home() {
   useEffect(() => {
     if (!isUserLoading) {
       if (user) {
-        if (user.email === 'admin@gmail.com') {
+        if (user.email === 'admin@drivewise.com') {
           router.replace('/admin');
         } else {
           router.replace('/dashboard');
@@ -32,5 +32,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

@@ -25,13 +25,13 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
     if (!isUserLoading) {
       if (!user) {
         router.push('/login');
-      } else if (user.email !== 'admin@gmail.com') {
+      } else if (user.email !== 'admin@drivewise.com') {
         router.push('/dashboard');
       }
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user || user.email !== 'admin@gmail.com') {
+  if (isUserLoading || !user || user.email !== 'admin@drivewise.com') {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -62,7 +62,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-bold text-primary">Admin Dashboard</h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline">
-                {user?.email}
+                {user?.email?.split('@')[0]}
               </span>
               <Button variant="ghost" size="icon" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />

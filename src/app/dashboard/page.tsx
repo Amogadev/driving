@@ -67,7 +67,7 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold text-primary">Dashboard</h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline">
-                {user?.email}
+                {user?.email?.split('@')[0]}
               </span>
               <Button variant="ghost" size="icon" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />

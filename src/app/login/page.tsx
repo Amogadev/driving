@@ -30,7 +30,7 @@ import {
   useAuth,
   useUser,
 } from '@/firebase';
-import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, Eye, EyeOff, User as UserIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
@@ -38,8 +38,8 @@ import Image from 'next/image';
 export const dynamic = 'force-dynamic';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  username: z.string().min(1, { message: 'Please enter a username.' }),
+  password: z.string().min(1, { message: 'Please enter a password.' }),
 });
 
 export default function LoginPage() {
@@ -53,40 +53,41 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email === 'admin@gmail.com') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+        if (user.email === 'admin@drivewise.com') {
+            router.push('/admin');
+        } else {
+            router.push('/dashboard');
+        }
     }
   }, [user, isUserLoading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    const email = `${values.username}@drivewise.com`;
+    const password = values.password;
+
     try {
-      await initiateEmailSignIn(auth, values.email, values.password);
-      // The onAuthStateChanged listener in useUser will handle the redirect.
+      await initiateEmailSignIn(auth, email, password);
     } catch (error) {
       if (error instanceof FirebaseError) {
-        // Special user creation logic
-        const isSpecialUser = values.email === 'abc@gmail.com' || values.email === 'admin@gmail.com';
+        const isSpecialUser = values.username === 'admin';
+        const specialUserPassword = 'admin';
+
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-          if (isSpecialUser) {
+          if (isSpecialUser && password === specialUserPassword) {
             try {
-              await initiateEmailSignUp(auth, values.email, values.password);
-              // After sign up, the onAuthStateChanged listener will pick up the new user and redirect.
+              await initiateEmailSignUp(auth, email, specialUserPassword);
             } catch (signupError: any) {
-              // If the user already exists (race condition), just sign them in.
               if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
                 try {
-                  await initiateEmailSignIn(auth, values.email, values.password);
+                  await initiateEmailSignIn(auth, email, specialUserPassword);
                 } catch (secondSignInError) {
                    toast({
                       variant: 'destructive',
@@ -98,7 +99,7 @@ export default function LoginPage() {
                 toast({
                   variant: 'destructive',
                   title: 'Setup Failed',
-                  description: 'Could not create the default user account.',
+                  description: 'Could not create the default admin account.',
                 });
               }
             }
@@ -110,7 +111,6 @@ export default function LoginPage() {
             });
           }
         } else {
-          // Handle other Firebase errors
           switch (error.code) {
             case 'auth/wrong-password':
               toast({
@@ -123,7 +123,7 @@ export default function LoginPage() {
                toast({
                 variant: 'destructive',
                 title: 'Too Many Attempts',
-                description: 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.',
+                description: 'Access to this account has been temporarily disabled. Please try again later.',
               });
               break;
             default:
@@ -136,7 +136,6 @@ export default function LoginPage() {
           }
         }
       } else {
-        // Handle non-Firebase errors
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -179,17 +178,19 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="user@example.com"
-                        {...field}
-                        className="bg-white/20 border-white/30 placeholder:text-white/60"
-                      />
+                      <div className="relative">
+                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" />
+                        <Input
+                            placeholder="Enter your username"
+                            {...field}
+                            className="bg-white/20 border-white/30 placeholder:text-white/60 pl-10"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -241,7 +242,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
-
-    

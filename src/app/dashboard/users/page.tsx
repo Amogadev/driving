@@ -268,7 +268,7 @@ export default function UsersListPage() {
             <div className="relative pt-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search by username or email..."
+                placeholder="Search by username..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 max-w-sm"
@@ -296,7 +296,6 @@ export default function UsersListPage() {
                       <TableHead className="cursor-pointer" onClick={() => requestSort('username')}>
                         <div className="flex items-center">Username {getSortIndicator('username')}</div>
                       </TableHead>
-                      <TableHead>Email</TableHead>
                       <TableHead>Pending Amount</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -307,7 +306,6 @@ export default function UsersListPage() {
                         <TableRow key={user.id}>
                           <TableCell>{String(index + 1).padStart(3, '0')}</TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
-                          <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <UserPendingAmount userId={user.id} />
                           </TableCell>
@@ -319,7 +317,7 @@ export default function UsersListPage() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={4}
                           className="h-24 text-center"
                         >
                           No users found.

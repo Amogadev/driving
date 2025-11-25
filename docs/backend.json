@@ -125,7 +125,7 @@
         },
         "email": {
           "type": "string",
-          "description": "Email address of the user.",
+          "description": "Email address of the user, constructed from username.",
           "format": "email"
         },
         "companyName": {
