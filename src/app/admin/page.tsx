@@ -98,6 +98,7 @@ function UserList() {
                             <TableRow>
                                 <TableHead>Username</TableHead>
                                 <TableHead>Company Name</TableHead>
+                                <TableHead>Last Login</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -106,11 +107,12 @@ function UserList() {
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.username}</TableCell>
                                         <TableCell>{user.companyName}</TableCell>
+                                        <TableCell>{"N/A"}</TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={2} className="h-24 text-center">
+                                    <TableCell colSpan={3} className="h-24 text-center">
                                         No user accounts found.
                                     </TableCell>
                                 </TableRow>
