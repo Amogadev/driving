@@ -136,14 +136,6 @@ export function LLRForm() {
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
       
-      // Update the existing user's document
-      const userRef = doc(firestore, 'users', user.uid);
-      const userData = {
-          username: values.username || user.displayName, // Fallback to existing display name
-          // update other user-specific fields if necessary
-      };
-      setDocumentNonBlocking(userRef, userData, { merge: true });
-
       const submittedAtDate = new Date();
       const paymentDueDate = addDays(submittedAtDate, 15);
 
@@ -678,5 +670,3 @@ export function LLRForm() {
     </Card>
   );
 }
-
-    
