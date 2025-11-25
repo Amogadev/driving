@@ -2,10 +2,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, PlusCircle } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { CreateAccountForm } from '@/components/create-account-form';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +50,77 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function UserList() {
+    const firestore = useFirestore();
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(
+          collection(firestore, 'users'),
+          where('username', '!=', 'admin'),
+          orderBy('username', 'asc')
+        );
+    }, [firestore]);
+
+    const { data: users, isLoading, error } = useCollection(usersQuery);
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-20 text-destructive">
+                <p>Error loading users: {error.message}</p>
+                <p className="text-sm text-muted-foreground">
+                    Please check your internet connection or security rules.
+                </p>
+            </div>
+        );
+    }
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Created Accounts</CardTitle>
+                <CardDescription>A list of all non-admin user accounts.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Username</TableHead>
+                                <TableHead>Company Name</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users && users.length > 0 ? (
+                                users.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell className="font-medium">{user.username}</TableCell>
+                                        <TableCell>{user.companyName}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="h-24 text-center">
+                                        No user accounts found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
 export default function AdminPage() {
@@ -92,7 +173,7 @@ export default function AdminPage() {
               </DialogContent>
             </Dialog>
           </div>
-          {/* User list or other admin content can be added here */}
+          <UserList />
         </main>
       </div>
     </AdminAuthWrapper>
