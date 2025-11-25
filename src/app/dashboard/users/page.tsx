@@ -460,7 +460,7 @@ function UserApplicationsList() {
                     const pendingAmount = (app.totalFee || 0) - (app.paidAmount || 0);
                     return (
                       <TableRow key={app.id}>
-                         <TableCell>{currentUser?.username || 'N/A'}</TableCell>
+                         <TableCell>{app.fullName || 'N/A'}</TableCell>
                         <TableCell>{currentUser?.companyName || 'N/A'}</TableCell>
                         <TableCell className="font-medium">{app.applicationId}</TableCell>
                         <TableCell>
@@ -524,3 +524,5 @@ export default function UsersListPage() {
     </div>
   );
 }
+
+    
