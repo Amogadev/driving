@@ -10,20 +10,20 @@ import {
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth): Promise<void> {
   // CRITICAL: Call signInAnonymously directly. Do NOT use 'await signInAnonymously(...)'.
+  // Return the promise to allow for chaining .catch() for error handling.
   return signInAnonymously(authInstance).then(() => {});
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
 
 /** Initiate email/password sign-up (non-blocking). */
 export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): Promise<void> {
   // CRITICAL: Call createUserWithEmailAndPassword directly. Do NOT use 'await createUserWithEmailAndPassword(...)'.
+  // Return the promise to allow for chaining .catch() for error handling.
   return createUserWithEmailAndPassword(authInstance, email, password).then(() => {});
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
 
 /** Initiate email/password sign-in (non-blocking). */
 export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): Promise<void> {
   // CRITICAL: Call signInWithEmailAndPassword directly. Do NOT use 'await signInWithEmailAndPassword(...)'.
+  // Return the promise to allow for chaining .catch() for error handling.
   return signInWithEmailAndPassword(authInstance, email, password).then(() => {});
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }

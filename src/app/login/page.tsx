@@ -25,6 +25,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   initiateEmailSignIn,
+  initiateEmailSignUp,
   useAuth,
   useUser,
 } from '@/firebase';
@@ -70,28 +71,41 @@ export default function LoginPage() {
         let description = 'An unexpected error occurred. Please try again.';
         if (error instanceof FirebaseError) {
             switch (error.code) {
-                case 'auth/invalid-credential':
-                    description = 'Invalid credentials. Please check your email and password.';
-                    break;
                 case 'auth/user-not-found':
-                    description = 'No account found with this email.';
+                    if (values.email === 'abc@gmail.com') {
+                        try {
+                            // If the special user doesn't exist, create it and then sign in.
+                            await initiateEmailSignUp(auth, values.email, values.password);
+                            // The onAuthStateChanged listener in useUser will handle the redirect.
+                        } catch (signupError) {
+                            toast({
+                                variant: 'destructive',
+                                title: 'Setup Failed',
+                                description: 'Could not create the default user account.',
+                            });
+                        }
+                    } else {
+                        description = 'No account found with this email.';
+                        toast({ variant: 'destructive', title: 'Authentication Failed', description });
+                    }
                     break;
+                case 'auth/invalid-credential':
                 case 'auth/wrong-password':
                     description = 'Incorrect password. Please try again.';
+                    toast({ variant: 'destructive', title: 'Authentication Failed', description });
                     break;
                 case 'auth/invalid-email':
                     description = 'The email address is not valid.';
+                    toast({ variant: 'destructive', title: 'Authentication Failed', description });
                     break;
                 default:
                     description = 'Please check your credentials and try again.';
+                    toast({ variant: 'destructive', title: 'Authentication Failed', description });
                     break;
             }
+        } else {
+             toast({ variant: 'destructive', title: 'Authentication Failed', description });
         }
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Failed',
-        description,
-      });
     } finally {
       setIsSubmitting(false);
     }
