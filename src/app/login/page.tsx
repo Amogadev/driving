@@ -60,7 +60,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push('/dashboard');
+      if (user.email === 'admin@gmail.com') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, isUserLoading, router]);
 
@@ -71,65 +75,68 @@ export default function LoginPage() {
       // The onAuthStateChanged listener in useUser will handle the redirect.
     } catch (error) {
       if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/user-not-found':
-          case 'auth/invalid-credential':
-            if (values.email === 'abc@gmail.com') {
-              // The special user does not exist, so let's create it.
-              // The onAuthStateChanged listener will then pick up the new user and redirect.
-              try {
-                await initiateEmailSignUp(auth, values.email, values.password);
-              } catch (signupError: any) {
-                if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
-                  // This can happen in a race condition. If the user already exists, just sign them in.
-                  try {
-                    await initiateEmailSignIn(auth, values.email, values.password);
-                  } catch (secondSignInError) {
-                     toast({
-                        variant: 'destructive',
-                        title: 'Login Failed',
-                        description: 'Please check your credentials and try again.',
-                     });
-                  }
-                } else {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Setup Failed',
-                    description: 'Could not create the default user account.',
-                  });
+        // Special user creation logic
+        const isSpecialUser = values.email === 'abc@gmail.com' || values.email === 'admin@gmail.com';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          if (isSpecialUser) {
+            try {
+              await initiateEmailSignUp(auth, values.email, values.password);
+              // After sign up, the onAuthStateChanged listener will pick up the new user and redirect.
+            } catch (signupError: any) {
+              // If the user already exists (race condition), just sign them in.
+              if (signupError instanceof FirebaseError && signupError.code === 'auth/email-already-in-use') {
+                try {
+                  await initiateEmailSignIn(auth, values.email, values.password);
+                } catch (secondSignInError) {
+                   toast({
+                      variant: 'destructive',
+                      title: 'Login Failed',
+                      description: 'Please check your credentials and try again.',
+                   });
                 }
+              } else {
+                toast({
+                  variant: 'destructive',
+                  title: 'Setup Failed',
+                  description: 'Could not create the default user account.',
+                });
               }
-            } else {
+            }
+          } else {
+            toast({
+              variant: 'destructive',
+              title: 'Authentication Failed',
+              description: 'Invalid credentials. Please try again.',
+            });
+          }
+        } else {
+          // Handle other Firebase errors
+          switch (error.code) {
+            case 'auth/wrong-password':
               toast({
                 variant: 'destructive',
                 title: 'Authentication Failed',
-                description: 'Invalid credentials. Please try again.',
+                description: 'Incorrect password. Please try again.',
               });
-            }
-            break;
-          case 'auth/wrong-password':
-            toast({
-              variant: 'destructive',
-              title: 'Authentication Failed',
-              description: 'Incorrect password. Please try again.',
-            });
-            break;
-          case 'auth/too-many-requests':
-             toast({
-              variant: 'destructive',
-              title: 'Too Many Attempts',
-              description: 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.',
-            });
-            break;
-          default:
-            toast({
-              variant: 'destructive',
-              title: 'Authentication Failed',
-              description: error.message || 'An unexpected error occurred.',
-            });
-            break;
+              break;
+            case 'auth/too-many-requests':
+               toast({
+                variant: 'destructive',
+                title: 'Too Many Attempts',
+                description: 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.',
+              });
+              break;
+            default:
+              toast({
+                variant: 'destructive',
+                title: 'Authentication Failed',
+                description: error.message || 'An unexpected error occurred.',
+              });
+              break;
+          }
         }
       } else {
+        // Handle non-Firebase errors
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -234,3 +241,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

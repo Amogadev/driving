@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -14,7 +15,11 @@ export default function Home() {
   useEffect(() => {
     if (!isUserLoading) {
       if (user) {
-        router.replace('/dashboard');
+        if (user.email === 'admin@gmail.com') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
       } else {
         router.replace('/login');
       }
@@ -27,3 +32,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
