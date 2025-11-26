@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, PlusCircle, Trash2, Eye, Notebook, KeyRound } from 'lucide-react';
+import { Loader2, LogOut, PlusCircle, Trash2, Eye, Notebook } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
@@ -45,7 +45,6 @@ import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
-import { resetPassword } from '@/ai/flows/reset-password-flow';
 import { Input } from '@/components/ui/input';
 
 
@@ -268,9 +267,6 @@ function UserList() {
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isSavingNotes, setIsSavingNotes] = useState<string | null>(null);
     const [userForNotes, setUserForNotes] = useState<any | null>(null);
-    const [userForPassword, setUserForPassword] = useState<any>(null);
-    const [emailForReset, setEmailForReset] = useState('');
-    const [isSendingReset, setIsSendingReset] = useState(false);
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -323,10 +319,10 @@ function UserList() {
     
     const handleSaveNotes = (notes: string) => {
         if (!firestore || !userForNotes) return;
-    
+
         setIsSavingNotes(userForNotes.id);
         const userDocRef = doc(firestore, "users", userForNotes.id);
-    
+
         updateDoc(userDocRef, { notes: notes })
             .then(() => {
                 toast({
@@ -347,32 +343,6 @@ function UserList() {
                 setIsSavingNotes(null);
                 setUserForNotes(null);
             });
-    };
-
-    const handleResetPassword = async () => {
-        if (!emailForReset) {
-            toast({ variant: 'destructive', title: 'Email Required', description: 'Please enter an email address.' });
-            return;
-        }
-        setIsSendingReset(true);
-        try {
-            await resetPassword({ email: emailForReset });
-            toast({
-                title: 'Password Reset Email Sent',
-                description: `A password reset link has been sent to ${emailForReset}.`,
-            });
-        } catch (e: any) {
-            console.error('Password reset failed:', e);
-            toast({
-                variant: 'destructive',
-                title: 'Reset Failed',
-                description: e.message || 'Could not send the password reset email.',
-            });
-        } finally {
-            setIsSendingReset(false);
-            setUserForPassword(null);
-            setEmailForReset('');
-        }
     };
 
 
@@ -432,43 +402,6 @@ function UserList() {
                                                     </Button>
                                                 </DialogTrigger>
                                                 {userForNotes && userForNotes.id === user.id && <NotesDialog user={userForNotes} onSave={handleSaveNotes} />}
-                                            </Dialog>
-                                            <Dialog open={userForPassword?.id === user.id} onOpenChange={(open) => { if (!open) setUserForPassword(null); }}>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={() => {
-                                                        setUserForPassword(user);
-
-                                                        setEmailForReset(user.email);
-                                                    }}>
-                                                        <KeyRound className="h-4 w-4" />
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Reset Password for {userForPassword?.username}?</DialogTitle>
-                                                        <DialogDescription>
-                                                            Enter the email address to send the password reset link to. It has been pre-filled with the user's registered email.
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="py-4 space-y-2">
-                                                        <Label htmlFor="email-reset">Email Address</Label>
-                                                        <Input 
-                                                            id="email-reset" 
-                                                            value={emailForReset}
-                                                            onChange={(e) => setEmailForReset(e.target.value)}
-                                                            placeholder="user@example.com"
-                                                        />
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <DialogClose asChild>
-                                                            <Button variant="outline">Cancel</Button>
-                                                        </DialogClose>
-                                                        <Button onClick={handleResetPassword} disabled={isSendingReset}>
-                                                            {isSendingReset && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                            Send Reset Email
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
                                             </Dialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
