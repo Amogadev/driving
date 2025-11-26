@@ -120,7 +120,7 @@ service cloud.firestore {
       // CRITICAL: The 'applicantId' field must not be changed after creation.
       allow update: if isExistingOwner(resource.data.applicantId) && request.resource.data.applicantId == resource.data.applicantId;
       
-      allow delete: if isExistingOwner(resource.data.applicantId);
+      allow delete: if isExistingOwner(resource.data.applicantId) || isAdmin();
     }
   }
 }
