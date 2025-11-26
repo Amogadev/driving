@@ -96,26 +96,25 @@ export function CreateAccountForm() {
             }
         })
         .catch((e: any) => {
+            // This will now correctly capture Firestore security rule violations.
             const contextualError = new FirestorePermissionError({
                 path: userRef.path,
                 operation: 'create',
                 requestResourceData: userData
             });
             errorEmitter.emit('permission-error', contextualError);
+            // We don't toast here; the global listener will handle it.
+            setLoading(false);
         });
 
     } catch (error: any) {
+      setLoading(false); // Stop loading on auth error
       if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
-        // User already exists, which is fine. We'll just update their data.
-        // We can't get the UID directly here, so for now we just inform the admin.
-        // A more robust solution might fetch user by email to update Firestore doc with new company name.
-        // For now, we will just show a success message.
-        setSubmitted(true);
         toast({
+          variant: "destructive",
           title: "Account Already Exists",
-          description: `The account for ${values.username} already exists. Their company name may have been updated if different.`,
+          description: `The account for ${values.username} already exists.`,
         });
-
       } else if (error instanceof FirebaseError && error.code === 'auth/weak-password') {
         toast({
             variant: "destructive",
@@ -130,10 +129,6 @@ export function CreateAccountForm() {
             description: error.message || "An unexpected error occurred. Please try again.",
         });
       }
-    } finally {
-      // The loading state is managed by the setDoc promise for the success case.
-      // We only need to turn it off for auth errors.
-      setLoading(false);
     }
   }
 
