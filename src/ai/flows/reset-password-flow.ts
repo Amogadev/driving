@@ -8,11 +8,13 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, getAuth } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+
 
 // Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp({
+if (!getApps().length) {
+  initializeApp({
     // You might need to configure credentials for production environments
     // For many cloud environments (like Cloud Run, Cloud Functions), this is handled automatically.
   });
@@ -39,7 +41,7 @@ const resetPasswordFlow = ai.defineFlow(
   },
   async ({ email }) => {
     try {
-      await admin.auth().generatePasswordResetLink(email);
+      await getAdminAuth().generatePasswordResetLink(email);
       // In a real app, you would now use this link to send an email.
       // For this example, we'll just confirm that the link could be generated.
       console.log(`Password reset link could be generated for: ${email}. In a real app, you would email this link to the user.`);
