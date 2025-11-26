@@ -70,11 +70,12 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAdmin() || request.auth.uid == userId;
-      // Admins can perform any write operation.
-      allow create, update, delete: if isAdmin();
-      // Users can only update their own document.
-      allow update: if request.auth.uid == userId;
+      // Admin has full read/write access to all user documents.
+      allow read, write: if isAdmin();
+      
+      // A regular user can only read and update their own document.
+      // They cannot create or delete user documents.
+      allow read, update: if request.auth.uid == userId;
     }
   }
 }
