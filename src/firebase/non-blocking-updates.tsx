@@ -1,3 +1,4 @@
+
 'use client';
     
 import {
@@ -5,6 +6,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   CollectionReference,
   DocumentReference,
   SetOptions,
@@ -87,3 +89,24 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
       )
     });
 }
+
+/**
+ * Initiates a writeBatch operation.
+ * Does NOT await the write operation internally.
+ */
+export function commitBatchNonBlocking(batch: ReturnType<typeof writeBatch>) {
+    batch.commit()
+      .catch(error => {
+        // Note: Batch errors are generic and don't pinpoint the exact failed operation.
+        // For more granular error handling, individual operations with .catch are better.
+        console.error("Batch write failed:", error);
+        // Emitting a generic error for the batch.
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: 'batch operation',
+            operation: 'write',
+          })
+        );
+      });
+  }

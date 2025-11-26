@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, deleteDoc, updateDoc, writeBatch, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import {
   Table,
@@ -50,7 +50,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export const dynamic = 'force-dynamic';
 
@@ -422,53 +421,101 @@ function AdminUserList() {
 // =====================================================================
 
 function ApplicationDetailsDialog({ application }: { application: any }) {
-  const details = {
-    totalFee: application.totalFee || 0,
-    paidAmount: application.paidAmount || 0,
-    pendingAmount: (application.totalFee || 0) - (application.paidAmount || 0),
-    paymentDueDate: application.paymentDueDate ? format(new Date(application.paymentDueDate), 'PPP') : "Not set",
-  };
+    const firestore = useFirestore();
+    const [payments, setPayments] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-  return (
-    <Dialog>
-        <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-                <Eye className="h-4 w-4" />
-            </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>Application Details</DialogTitle>
-                <DialogDescription>
-                    Payment details for application ID: {application.applicationId}
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
+    const fetchPayments = async () => {
+        if (!firestore || !application.id) return;
+        setIsLoading(true);
+        const paymentsRef = collection(firestore, 'llr_applications', application.id, 'payments');
+        const q = query(paymentsRef);
+
+        try {
+            const snapshot = await getDocs(q);
+            const paymentsData = snapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
+            }));
+            setPayments(paymentsData);
+        } catch (e: any) {
+            console.error("Failed to fetch payment history:", e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const details = {
+      totalFee: application.totalFee || 0,
+      paidAmount: application.paidAmount || 0,
+      pendingAmount: (application.totalFee || 0) - (application.paidAmount || 0),
+      paymentDueDate: application.paymentDueDate ? format(new Date(application.paymentDueDate), 'PPP') : "Not set",
+    };
+  
+    return (
+      <Dialog onOpenChange={(open) => open && fetchPayments()}>
+          <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                  <Eye className="h-4 w-4" />
+              </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Application Details</DialogTitle>
+                  <DialogDescription>
+                      Payment details for application ID: {application.applicationId}
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-6">
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <p className="text-sm text-muted-foreground">Total Fee</p>
-                        <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <p className="text-sm text-muted-foreground">Amount Paid</p>
-                        <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium">Pending Amount</p>
-                        <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
-                    </div>
-                    <Separator />
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
-                        <p className="text-lg font-semibold">{details.paymentDueDate}</p>
-                    </div>
-                </div>
-            </div>
-        </DialogContent>
-    </Dialog>
-  );
-}
+                      <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">Total Fee</p>
+                          <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
+                      </div>
+                       <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">Amount Paid</p>
+                          <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                          <p className="text-sm font-medium">Pending Amount</p>
+                          <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
+                      </div>
+                      <Separator />
+                      <div>
+                          <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
+                          <p className="text-lg font-semibold">{details.paymentDueDate}</p>
+                      </div>
+                  </div>
+                  
+                  <Separator />
+
+                  <div>
+                    <h4 className="text-lg font-semibold mb-2">Transaction History</h4>
+                    {isLoading ? (
+                         <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                    ) : payments.length > 0 ? (
+                        <div className="space-y-2">
+                            {payments.map(payment => (
+                                <div key={payment.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
+                                    <span>
+                                        {payment.paidAt instanceof Timestamp 
+                                            ? format(payment.paidAt.toDate(), "PP")
+                                            : "N/A"}
+                                    </span>
+                                    <span className="font-medium">₹{payment.amount.toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">No payment history found.</p>
+                    )}
+                  </div>
+              </div>
+          </DialogContent>
+      </Dialog>
+    );
+  }
 
 
 function PaymentDialog({ application, onPaymentSuccess }: { application: any, onPaymentSuccess: () => void }) {
@@ -483,15 +530,27 @@ function PaymentDialog({ application, onPaymentSuccess }: { application: any, on
     setIsProcessing(true);
 
     const appRef = doc(firestore, 'llr_applications', application.id);
+    const paymentRef = doc(collection(firestore, 'llr_applications', application.id, 'payments'));
+    
     const newPaidAmount = (application.paidAmount || 0) + amountToPay;
     const isFullyPaid = newPaidAmount >= (application.totalFee || 0);
 
-    const updatedData = {
+    const batch = writeBatch(firestore);
+
+    // 1. Update the main application document
+    batch.update(appRef, {
       paidAmount: newPaidAmount,
       paymentStatus: isFullyPaid ? "Paid" : "Partially Paid",
-    };
+    });
 
-    updateDoc(appRef, updatedData)
+    // 2. Add a new document to the payments subcollection
+    batch.set(paymentRef, {
+        amount: amountToPay,
+        paidAt: serverTimestamp(),
+    });
+
+
+    batch.commit()
       .then(() => {
         toast({
           title: "Payment Successful",
@@ -501,12 +560,11 @@ function PaymentDialog({ application, onPaymentSuccess }: { application: any, on
       })
       .catch((e: any) => {
         const contextualError = new FirestorePermissionError({
-          path: appRef.path,
-          operation: 'update',
-          requestResourceData: updatedData,
+          path: appRef.path, // or could be paymentRef.path
+          operation: 'write',
+          requestResourceData: { paidAmount: newPaidAmount },
         });
         errorEmitter.emit('permission-error', contextualError);
-        // We no longer show a toast here because the global listener will throw the error
       })
       .finally(() => {
         setIsProcessing(false);
@@ -722,6 +780,7 @@ function UserApplicationsList() {
                 onPaymentSuccess={() => {
                   setIsPaymentDialogOpen(false);
                   setSelectedApp(null);
+                  forceRefetch(); // Force a refetch of the applications list
                 }} 
               />
             )}
@@ -767,5 +826,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    

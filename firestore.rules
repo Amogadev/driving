@@ -120,6 +120,16 @@ service cloud.firestore {
       allow update: if isExistingOwner(resource.data.applicantId) && request.resource.data.applicantId == resource.data.applicantId;
       
       allow delete: if isExistingOwner(resource.data.applicantId) || isAdmin();
+      
+      // Rules for the 'payments' subcollection
+      match /payments/{paymentId} {
+        // Only the application owner can view their payment history.
+        allow list: if isOwner(get(/databases/$(database)/documents/llr_applications/$(applicationId)).data.applicantId);
+        // Only the application owner can create a new payment record.
+        allow create: if isOwner(get(/databases/$(database)/documents/llr_applications/$(applicationId)).data.applicantId);
+        // Reading, updating, or deleting individual payment records is disallowed for now.
+        allow get, update, delete: if false;
+      }
     }
   }
 }
