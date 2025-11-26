@@ -113,9 +113,8 @@ service cloud.firestore {
       // The client-side code is responsible for filtering by applicantId.
       allow list: if isSignedIn();
       
-      // CRITICAL: The document being created MUST have an 'applicantId' field.
-      // This is now used by the client to associate applications with users.
-      allow create: if isSignedIn() && request.resource.data.applicantId != null;
+      // CRITICAL: The document being created MUST have an 'applicantId' that matches the user's own ID.
+      allow create: if isSignedIn() && request.resource.data.applicantId == request.auth.uid;
       
       // CRITICAL: The 'applicantId' field must not be changed after creation.
       allow update: if isExistingOwner(resource.data.applicantId) && request.resource.data.applicantId == resource.data.applicantId;
