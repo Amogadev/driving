@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, PlusCircle, Trash2, Eye, KeyRound } from 'lucide-react';
+import { Loader2, LogOut, PlusCircle, Trash2, Eye, Notebook } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CreateAccountForm } from '@/components/create-account-form';
-import { collection, query, where, orderBy, doc, deleteDoc, Timestamp, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, deleteDoc, Timestamp, writeBatch, getDocs, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -38,14 +38,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
-import { resetPassword } from '@/ai/flows/reset-password-flow';
 
 
 export const dynamic = 'force-dynamic';
@@ -221,32 +220,33 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
     );
 }
 
-function ResetPasswordDialog({ user, onReset }: { user: any, onReset: (email: string) => void }) {
-    const [email, setEmail] = useState(user.email || '');
+function NotesDialog({ user, onSave }: { user: any, onSave: (notes: string) => void }) {
+    const [notes, setNotes] = useState(user.notes || '');
 
     return (
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Reset Password for {user.username}?</DialogTitle>
+                <DialogTitle>Notes for {user.username}</DialogTitle>
                 <DialogDescription>
-                    Enter the email address to send the password reset link to. It has been pre-filled with the user's registered email.
+                    Add or edit private notes for this user. Only admins can see this.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-                <Label htmlFor="email-reset">Email Address</Label>
-                <Input
-                    id="email-reset"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter email address"
+                <Label htmlFor="notes">User Notes</Label>
+                <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Enter any notes here..."
+                    className="min-h-[150px] mt-2"
                 />
             </div>
             <DialogFooter>
                 <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => onReset(email)}>
-                    Send Reset Email
+                <Button onClick={() => onSave(notes)}>
+                    Save Notes
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -258,8 +258,8 @@ function UserList() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    const [isResetting, setIsResetting] = useState<string | null>(null);
-    const [userToReset, setUserToReset] = useState<any | null>(null);
+    const [isSavingNotes, setIsSavingNotes] = useState<string | null>(null);
+    const [userForNotes, setUserForNotes] = useState<any | null>(null);
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -270,7 +270,7 @@ function UserList() {
         );
     }, [firestore]);
 
-    const { data: allUsers, isLoading, error } = useCollection(usersQuery);
+    const { data: allUsers, isLoading, error, forceRefetch } = useCollection(usersQuery);
 
     const users = useMemo(() => {
         if (!allUsers) return [];
@@ -310,42 +310,29 @@ function UserList() {
         }
     };
 
-    const handleResetPassword = async (email: string) => {
-        if (!email) {
-            toast({
-                variant: "destructive",
-                title: "Missing Email",
-                description: "Please enter an email address to send the reset link to.",
-            });
-            return;
-        }
-        if (!userToReset) return;
+    const handleSaveNotes = async (notes: string) => {
+        if (!firestore || !userForNotes) return;
 
-        setIsResetting(userToReset.id);
+        setIsSavingNotes(userForNotes.id);
+        const userDocRef = doc(firestore, "users", userForNotes.id);
+
         try {
-            const result = await resetPassword(email);
-            if (result.success) {
-                toast({
-                    title: "Password Reset Email Sent",
-                    description: `An email has been sent to ${email} with instructions.`,
-                });
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Password Reset Failed",
-                    description: result.message,
-                });
-            }
-        } catch (error) {
-            console.error("Failed to trigger password reset flow:", error);
+            await updateDoc(userDocRef, { notes: notes });
             toast({
-                variant: "destructive",
-                title: "Error",
-                description: "An unexpected error occurred while trying to reset the password.",
+                title: "Notes Saved",
+                description: `Notes for ${userForNotes.username} have been updated.`,
             });
+            forceRefetch(); // Refetch users to get the latest notes
+        } catch (e: any) {
+            const contextualError = new FirestorePermissionError({
+                operation: 'update',
+                path: userDocRef.path,
+                requestResourceData: { notes },
+            });
+            errorEmitter.emit('permission-error', contextualError);
         } finally {
-            setIsResetting(null);
-            setUserToReset(null);
+            setIsSavingNotes(null);
+            setUserForNotes(null);
         }
     };
 
@@ -397,13 +384,13 @@ function UserList() {
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
                                             <TransactionHistoryDialog userId={user.id} />
-                                             <Dialog open={userToReset?.id === user.id} onOpenChange={(open) => !open && setUserToReset(null)}>
+                                             <Dialog open={userForNotes?.id === user.id} onOpenChange={(open) => !open && setUserForNotes(null)}>
                                                 <DialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={isResetting === user.id} onClick={() => setUserToReset(user)}>
-                                                        {isResetting === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                                                    <Button variant="ghost" size="icon" disabled={isSavingNotes === user.id} onClick={() => setUserForNotes(user)}>
+                                                        {isSavingNotes === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Notebook className="h-4 w-4" />}
                                                     </Button>
                                                 </DialogTrigger>
-                                                {userToReset && userToReset.id === user.id && <ResetPasswordDialog user={userToReset} onReset={handleResetPassword} />}
+                                                {userForNotes && userForNotes.id === user.id && <NotesDialog user={userForNotes} onSave={handleSaveNotes} />}
                                             </Dialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -501,5 +488,3 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    

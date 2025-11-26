@@ -79,7 +79,8 @@ export function CreateAccountForm() {
         username: values.username,
         email: email,
         companyName: values.companyName,
-        disabled: false, 
+        disabled: false,
+        notes: "", // Initialize with an empty notes field
       };
       
       // Non-blocking write with custom error handling for a new user
