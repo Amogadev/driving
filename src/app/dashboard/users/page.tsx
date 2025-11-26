@@ -441,24 +441,26 @@ function PaymentDialog({ application, onPaymentSuccess }: { application: any, on
       paymentStatus: isFullyPaid ? "Paid" : "Partially Paid",
     };
 
-    try {
-      await updateDoc(appRef, updatedData);
-      toast({
-        title: "Payment Successful",
-        description: `₹${amountToPay.toFixed(2)} has been paid for application ${application.applicationId}.`,
+    updateDoc(appRef, updatedData)
+      .then(() => {
+        toast({
+          title: "Payment Successful",
+          description: `₹${amountToPay.toFixed(2)} has been paid for application ${application.applicationId}.`,
+        });
+        onPaymentSuccess();
+      })
+      .catch((e: any) => {
+        const contextualError = new FirestorePermissionError({
+          path: appRef.path,
+          operation: 'update',
+          requestResourceData: updatedData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        // We no longer show a toast here because the global listener will throw the error
+      })
+      .finally(() => {
+        setIsProcessing(false);
       });
-      onPaymentSuccess();
-    } catch (e: any) {
-      const contextualError = new FirestorePermissionError({
-        path: appRef.path,
-        operation: 'update',
-        requestResourceData: updatedData,
-      });
-      errorEmitter.emit('permission-error', contextualError);
-      toast({ variant: "destructive", title: "Payment Failed", description: "Could not process your payment." });
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   return (
