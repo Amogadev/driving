@@ -322,8 +322,8 @@ function UserList() {
             const result = await resetPassword(email);
             if (result.success) {
                 toast({
-                    title: "Password Reset Initiated",
-                    description: result.message,
+                    title: "Password Reset Email Sent",
+                    description: `An email has been sent to ${email} with instructions.`,
                 });
             } else {
                 toast({
@@ -497,5 +497,7 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    
 
     
