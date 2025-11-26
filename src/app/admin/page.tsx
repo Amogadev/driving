@@ -273,6 +273,14 @@ function UserList() {
     };
 
     const handleResetPassword = async (userId: string, email: string) => {
+        if (!email) {
+            toast({
+                variant: "destructive",
+                title: "Missing Email",
+                description: "This user does not have an email address to send a reset link to.",
+            });
+            return;
+        }
         setIsResetting(userId);
         try {
             const result = await resetPassword(email);
@@ -465,3 +473,5 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    
