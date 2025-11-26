@@ -93,30 +93,28 @@ function UserList() {
         try {
             const batch = writeBatch(firestore);
 
-            // 1. Find all applications for the user
             const appsQuery = query(collection(firestore, 'llr_applications'), where('applicantId', '==', userId));
             const appsSnapshot = await getDocs(appsQuery);
 
-            // 2. Add all applications to the delete batch
+            const deletedPaths: string[] = [];
             appsSnapshot.forEach((appDoc) => {
                 batch.delete(appDoc.ref);
+                deletedPaths.push(appDoc.ref.path);
             });
 
-            // 3. Add the user document to the delete batch
             const userDocRef = doc(firestore, "users", userId);
             batch.delete(userDocRef);
-
-            // 4. Commit the batch
+            deletedPaths.push(userDocRef.path);
+            
             await batch.commit();
 
             toast({ title: "User Deleted", description: "The user account and all their data have been permanently removed." });
         } catch (e: any) {
-            console.error("Error deleting user and their data:", e);
-             const contextualError = new FirestorePermissionError({
+            const contextualError = new FirestorePermissionError({
                 operation: 'delete',
-                path: `users/${userId} and related applications`,
-             });
-             errorEmitter.emit('permission-error', contextualError);
+                path: `batch write to delete user ${userId} and their applications`,
+            });
+            errorEmitter.emit('permission-error', contextualError);
             toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete user. You may lack permissions." });
         } finally {
             setIsDeleting(null);
@@ -268,5 +266,3 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    
