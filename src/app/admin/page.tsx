@@ -91,25 +91,31 @@ function UserList() {
         }
         setIsDeleting(userId);
         try {
+            // This function now correctly deletes the user and all their applications.
             const batch = writeBatch(firestore);
 
+            // 1. Find all LLR applications for the user.
             const appsQuery = query(collection(firestore, 'llr_applications'), where('applicantId', '==', userId));
             const appsSnapshot = await getDocs(appsQuery);
 
+            // 2. Add each application to the delete batch.
             const deletedPaths: string[] = [];
             appsSnapshot.forEach((appDoc) => {
                 batch.delete(appDoc.ref);
                 deletedPaths.push(appDoc.ref.path);
             });
 
+            // 3. Add the user document itself to the delete batch.
             const userDocRef = doc(firestore, "users", userId);
             batch.delete(userDocRef);
             deletedPaths.push(userDocRef.path);
             
+            // 4. Commit the batch write to delete everything at once.
             await batch.commit();
 
             toast({ title: "User Deleted", description: "The user account and all their data have been permanently removed." });
         } catch (e: any) {
+            // This provides detailed error information if the deletion fails due to permissions.
             const contextualError = new FirestorePermissionError({
                 operation: 'delete',
                 path: `batch write to delete user ${userId} and their applications`,
