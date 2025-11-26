@@ -76,9 +76,33 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
 
 function NotepadDialog({ user, onSave }: { user: any, onSave: (notes: string) => void }) {
     const [notes, setNotes] = useState(user.notes || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+    const firestore = useFirestore();
 
     const handleSave = () => {
-        onSave(notes);
+        if (!firestore) return;
+        setIsSaving(true);
+        const userDocRef = doc(firestore, "users", user.id);
+        updateDoc(userDocRef, { notes: notes })
+            .then(() => {
+                toast({
+                    title: "Notes Saved",
+                    description: `Notes for ${user.username} have been updated.`,
+                });
+                onSave(notes); // This will trigger refetch and close the dialog
+            })
+            .catch((e: any) => {
+                const contextualError = new FirestorePermissionError({
+                    operation: 'update',
+                    path: userDocRef.path,
+                    requestResourceData: { notes },
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            })
+            .finally(() => {
+                setIsSaving(false);
+            });
     };
 
     return (
@@ -103,11 +127,10 @@ function NotepadDialog({ user, onSave }: { user: any, onSave: (notes: string) =>
                 <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <DialogClose asChild>
-                    <Button onClick={handleSave}>
-                        Save Notes
-                    </Button>
-                </DialogClose>
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Notes
+                </Button>
             </DialogFooter>
         </DialogContent>
     );
@@ -117,7 +140,6 @@ function UserList() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    const [isSavingNotes, setIsSavingNotes] = useState<string | null>(null);
     const [userForNotes, setUserForNotes] = useState<any | null>(null);
 
     const usersQuery = useMemoFirebase(() => {
@@ -170,33 +192,10 @@ function UserList() {
         }
     };
     
-    const handleSaveNotes = (notes: string) => {
-        if (!firestore || !userForNotes) return;
-
-        setIsSavingNotes(userForNotes.id);
-        const userDocRef = doc(firestore, "users", userForNotes.id);
-
-        updateDoc(userDocRef, { notes: notes })
-            .then(() => {
-                toast({
-                    title: "Notes Saved",
-                    description: `Notes for ${userForNotes.username} have been updated.`,
-                });
-                forceRefetch();
-            })
-            .catch((e: any) => {
-                const contextualError = new FirestorePermissionError({
-                    operation: 'update',
-                    path: userDocRef.path,
-                    requestResourceData: { notes },
-                });
-                errorEmitter.emit('permission-error', contextualError);
-            })
-            .finally(() => {
-                setIsSavingNotes(null);
-                setUserForNotes(null);
-            });
-    };
+    const handleNotesSaved = () => {
+        setUserForNotes(null);
+        forceRefetch();
+    }
 
 
     if (isLoading) {
@@ -230,6 +229,7 @@ function UserList() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Username</TableHead>
+                                <TableHead>Company Name</TableHead>
                                 <TableHead>Last Login</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -239,6 +239,7 @@ function UserList() {
                                 users.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.username}</TableCell>
+                                        <TableCell>{user.companyName || 'N/A'}</TableCell>
                                         <TableCell>
                                             {user.lastLogin instanceof Timestamp
                                                 ? format(user.lastLogin.toDate(), "PPpp")
@@ -247,11 +248,11 @@ function UserList() {
                                         <TableCell className="text-right space-x-1">
                                              <Dialog open={userForNotes?.id === user.id} onOpenChange={(open) => !open && setUserForNotes(null)}>
                                                 <DialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={isSavingNotes === user.id} onClick={() => setUserForNotes(user)}>
-                                                        {isSavingNotes === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Notebook className="h-4 w-4" />}
+                                                    <Button variant="ghost" size="icon" onClick={() => setUserForNotes(user)}>
+                                                        <Notebook className="h-4 w-4" />
                                                     </Button>
                                                 </DialogTrigger>
-                                                {userForNotes && userForNotes.id === user.id && <NotepadDialog user={userForNotes} onSave={handleSaveNotes} />}
+                                                {userForNotes && userForNotes.id === user.id && <NotepadDialog user={userForNotes} onSave={handleNotesSaved} />}
                                             </Dialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -280,7 +281,7 @@ function UserList() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center">
+                                    <TableCell colSpan={4} className="h-24 text-center">
                                         No user accounts found.
                                     </TableCell>
                                 </TableRow>
@@ -349,7 +350,3 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    
-
-    
