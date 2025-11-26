@@ -13,6 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -223,13 +225,13 @@ function ResetPasswordDialog({ user, onReset }: { user: any, onReset: (email: st
     const [email, setEmail] = useState(user.email || '');
 
     return (
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Reset Password for {user.username}?</AlertDialogTitle>
-                <AlertDialogDescription>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Reset Password for {user.username}?</DialogTitle>
+                <DialogDescription>
                     Enter the email address to send the password reset link to. It has been pre-filled with the user's registered email.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
+                </DialogDescription>
+            </DialogHeader>
             <div className="py-4">
                 <Label htmlFor="email-reset">Email Address</Label>
                 <Input
@@ -239,13 +241,15 @@ function ResetPasswordDialog({ user, onReset }: { user: any, onReset: (email: st
                     placeholder="Enter email address"
                 />
             </div>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onReset(email)}>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={() => onReset(email)}>
                     Send Reset Email
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
+                </Button>
+            </DialogFooter>
+        </DialogContent>
     );
 }
 
@@ -393,14 +397,14 @@ function UserList() {
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
                                             <TransactionHistoryDialog userId={user.id} />
-                                             <AlertDialog onOpenChange={(open) => !open && setUserToReset(null)}>
-                                                <AlertDialogTrigger asChild>
+                                             <Dialog open={userToReset?.id === user.id} onOpenChange={(open) => !open && setUserToReset(null)}>
+                                                <DialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" disabled={isResetting === user.id} onClick={() => setUserToReset(user)}>
                                                         {isResetting === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                                     </Button>
-                                                </AlertDialogTrigger>
+                                                </DialogTrigger>
                                                 {userToReset && userToReset.id === user.id && <ResetPasswordDialog user={userToReset} onReset={handleResetPassword} />}
-                                            </AlertDialog>
+                                            </Dialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" disabled={isDeleting === user.id}>
@@ -497,7 +501,5 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    
 
     
