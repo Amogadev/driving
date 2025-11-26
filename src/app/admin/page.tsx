@@ -91,34 +91,36 @@ function UserList() {
             return;
         }
         setIsDeleting(userId);
+        
         try {
             const batch = writeBatch(firestore);
+            const userDocRef = doc(firestore, "users", userId);
 
-            // 1. Find all LLR applications for the user.
+            // Find all LLR applications for the user to delete them.
             const appsQuery = query(collection(firestore, 'llr_applications'), where('applicantId', '==', userId));
             const appsSnapshot = await getDocs(appsQuery);
-
-            // 2. Add each application to the delete batch.
             appsSnapshot.forEach((appDoc) => {
                 batch.delete(appDoc.ref);
             });
 
-            // 3. Mark the user document as disabled instead of deleting.
-            // This prevents them from logging in again.
-            const userDocRef = doc(firestore, "users", userId);
+            // Mark the user document as disabled instead of deleting.
             batch.update(userDocRef, { disabled: true });
             
-            // 4. Commit the batch write.
+            // Commit the batch write.
             await batch.commit();
 
             toast({ title: "User Deleted", description: "The user account has been disabled and all their data has been removed." });
         } catch (e: any) {
+            // Create a rich, contextual error for easier debugging.
+            // This is better than a generic "permissions" error.
             const contextualError = new FirestorePermissionError({
                 operation: 'delete',
-                path: `user ${userId} and their applications`,
+                // This path gives a clear idea of what the operation was trying to do.
+                path: `user (${userId}) and their applications`, 
             });
+            // Emit the error for the global listener to catch and display.
             errorEmitter.emit('permission-error', contextualError);
-            toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete user. You may lack permissions." });
+            // We no longer show a toast here because the global listener will handle it.
         } finally {
             setIsDeleting(null);
         }
@@ -269,5 +271,3 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
-
-    
