@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, LogOut, PlusCircle, Trash2, Eye } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -39,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Separator } from '@/components/ui/separator';
 
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +68,109 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+type PaymentDetails = {
+    totalFee: number;
+    paidAmount: number;
+    pendingAmount: number;
+    paymentDueDate: string | null;
+  };
+  
+function TransactionHistoryDialog({ userId }: { userId: string }) {
+    const firestore = useFirestore();
+    const [details, setDetails] = useState<PaymentDetails | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchPaymentDetails = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        setError(null);
+        
+        const llrApplicationsRef = collection(firestore, 'llr_applications');
+        const q = query(
+            llrApplicationsRef, 
+            where('applicantId', '==', userId)
+        );
+
+        try {
+          const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const applications = querySnapshot.docs.map(doc => doc.data());
+                applications.sort((a, b) => {
+                    const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
+                    const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate().getTime() : 0;
+                    return dateB - dateA;
+                });
+
+                const latestApplication = applications[0];
+                const totalFee = latestApplication.totalFee || 0;
+                const paidAmount = latestApplication.paidAmount || 0;
+                const pendingAmount = totalFee - paidAmount;
+                const paymentDueDate = latestApplication.paymentDueDate 
+                    ? format(new Date(latestApplication.paymentDueDate), 'PPP') 
+                    : "Not set";
+                
+                setDetails({ totalFee, paidAmount, pendingAmount, paymentDueDate });
+            } else {
+                setDetails({ totalFee: 0, paidAmount: 0, pendingAmount: 0, paymentDueDate: "No application found" });
+            }
+        } catch (e: any) {
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: `llr_applications`,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            setError("Failed to fetch payment details.");
+        } finally {
+          setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog onOpenChange={(open) => open && fetchPaymentDetails()}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <Eye className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Transaction History</DialogTitle>
+                    <DialogDescription>
+                        Showing payment details for the user's latest application.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {isLoading && <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    {details && !isLoading && (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Total Fee</p>
+                                <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Amount Paid</p>
+                                <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                            </div>
+                            <Separator />
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm font-medium">Pending Amount</p>
+                                <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
+                            </div>
+                            <Separator />
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
+                                <p className="text-lg font-semibold">{details.paymentDueDate}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 function UserList() {
@@ -173,7 +278,8 @@ function UserList() {
                                                 ? format(user.lastLogin.toDate(), "PPpp")
                                                 : "Never"}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right space-x-1">
+                                            <TransactionHistoryDialog userId={user.id} />
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" disabled={isDeleting === user.id}>
