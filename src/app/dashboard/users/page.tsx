@@ -463,52 +463,69 @@ function ApplicationDetailsDialog({ application }: { application: any }) {
               <DialogHeader>
                   <DialogTitle>Application Details</DialogTitle>
                   <DialogDescription>
-                      Payment details for application ID: {application.applicationId}
+                      Review your payment status and transaction history.
                   </DialogDescription>
               </DialogHeader>
               <div className="py-4 space-y-6">
-                <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground">Total Fee</p>
-                          <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
-                      </div>
-                       <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground">Amount Paid</p>
-                          <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium">Pending Amount</p>
-                          <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
-                      </div>
-                      <Separator />
-                      <div>
-                          <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
-                          <p className="text-lg font-semibold">{details.paymentDueDate}</p>
-                      </div>
-                  </div>
-                  
+                <Card className="bg-muted/50">
+                    <CardContent className="p-4 grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p className="text-xs text-muted-foreground">Total Fee</p>
+                            <p className="text-lg font-semibold">₹{details.totalFee.toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Paid</p>
+                            <p className="text-lg font-semibold text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Pending</p>
+                            <p className="text-lg font-semibold text-destructive">₹{details.pendingAmount.toFixed(2)}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Application ID:</span>
+                        <span className="font-medium">{application.applicationId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Payment Due:</span>
+                        <span className="font-medium">{details.paymentDueDate}</span>
+                    </div>
+                </div>
+
                   <Separator />
 
                   <div>
-                    <h4 className="text-lg font-semibold mb-2">Transaction History</h4>
+                    <h4 className="text-md font-semibold mb-2">Transaction History</h4>
                     {isLoading ? (
                          <div className="flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
                     ) : payments.length > 0 ? (
-                        <div className="space-y-2">
-                            {payments.map(payment => (
-                                <div key={payment.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
-                                    <span>
-                                        {payment.paidAt instanceof Timestamp 
-                                            ? format(payment.paidAt.toDate(), "PP")
-                                            : "N/A"}
-                                    </span>
-                                    <span className="font-medium">₹{payment.amount.toFixed(2)}</span>
-                                </div>
-                            ))}
+                        <div className="border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {payments.map(payment => (
+                                        <TableRow key={payment.id}>
+                                            <TableCell>
+                                                {payment.paidAt instanceof Timestamp 
+                                                    ? format(payment.paidAt.toDate(), "PP")
+                                                    : "N/A"}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium">₹{payment.amount.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground">No payment history found.</p>
+                        <p className="text-sm text-center py-4 text-muted-foreground">No payment history found.</p>
                     )}
                   </div>
               </div>
