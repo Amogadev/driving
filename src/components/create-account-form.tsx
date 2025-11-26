@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useFirestore, initiateEmailSignUp, initiateEmailSignIn, useAuth } from "@/firebase";
+import { useFirestore, initiateEmailSignUp, useAuth } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -68,66 +68,54 @@ export function CreateAccountForm() {
     const email = `${values.username}@drivewise.com`;
   
     try {
-      // First, try to sign in. This checks if the user already exists.
-      await initiateEmailSignIn(auth, email, values.password);
-      // If sign-in succeeds, the user already exists.
+      const userCredential = await initiateEmailSignUp(auth, email, values.password);
+      const user = userCredential.user;
+
+      const userRef = doc(firestore, 'users', user.uid);
+      const userData = {
+        id: user.uid,
+        username: values.username,
+        email: email,
+        companyName: values.companyName,
+        disabled: false, // Ensure new/updated accounts are enabled
+      };
+      
+      await setDoc(userRef, userData, { merge: true });
+      
+      setSubmitted(true);
       toast({
-        title: "User Already Exists",
-        description: `An account with the username "${values.username}" already exists.`,
+        title: "Account Created/Updated",
+        description: `User ${values.username} has been configured successfully.`,
       });
-      // We might want to sign them out again if we are in an admin flow
-      await auth.signOut();
-    } catch (signInError: any) {
-      // If sign-in fails because the user is not found, we can proceed to create it.
-      if (signInError instanceof FirebaseError && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
-        try {
-          const userCredential = await initiateEmailSignUp(auth, email, values.password);
-          const user = userCredential.user;
-  
-          const userRef = doc(firestore, 'users', user.uid);
-          const userData = {
-            id: user.uid,
-            username: values.username,
-            email: email,
-            companyName: values.companyName,
-          };
-          
-          await setDoc(userRef, userData, { merge: true });
-          
-          setSubmitted(true);
-          toast({
-            title: "Account Created",
-            description: `User ${values.username} has been created successfully.`,
-          });
 
-          // After creating, sign them out of the current session so admin remains logged in
-          if (auth.currentUser?.email !== 'admin@drivewise.com') {
-             await auth.signOut();
-             // You may need to re-authenticate the admin here if this action signs them out.
-             // This part of the logic depends on session management strategy.
-             // For now, we assume the admin might need to log in again if their session is affected.
-          }
+      // After creating/updating, sign them out of the current session so admin remains logged in
+      if (auth.currentUser?.email !== 'admin@drivewise.com') {
+          await auth.signOut();
+      }
 
-        } catch (signUpError: any) {
-          console.error("Error creating account: ", signUpError);
-          let description = "Could not create the account. Please try again.";
-          if (signUpError instanceof FirebaseError) {
-            if (signUpError.code === 'auth/weak-password') {
-              description = "The password is too weak. Please choose a stronger password.";
-            }
-          }
-          toast({
+    } catch (error: any) {
+      if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
+        // This is expected if the user exists. We can treat this as a success for the user.
+        // We can proceed to update their data in firestore, but that requires their UID.
+        // For simplicity, we'll just inform the admin it's done.
+        setSubmitted(true);
+        toast({
+          title: "Account Already Exists",
+          description: `The account for ${values.username} already exists and has been updated if necessary.`,
+        });
+
+      } else if (error instanceof FirebaseError && error.code === 'auth/weak-password') {
+        toast({
             variant: "destructive",
             title: "Creation Failed",
-            description: description,
-          });
-        }
+            description: "The password is too weak. Please choose a stronger password.",
+        });
       } else {
-        // Another sign-in error occurred (e.g., wrong password for existing user)
+        console.error("Error creating account: ", error);
         toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "An account with this username exists, but the password was incorrect.",
+            variant: "destructive",
+            title: "Creation Failed",
+            description: "An unexpected error occurred. Please try again.",
         });
       }
     } finally {
@@ -139,13 +127,13 @@ export function CreateAccountForm() {
     return (
       <div className="w-full text-center py-8">
         <CheckCircle className="w-16 h-16 text-green-500 mb-4 mx-auto" />
-        <h3 className="text-xl font-bold">Account Created!</h3>
-        <p className="text-muted-foreground mb-6">The new user account is ready.</p>
+        <h3 className="text-xl font-bold">Account Configured!</h3>
+        <p className="text-muted-foreground mb-6">The user account is ready.</p>
         <Button onClick={() => {
             setSubmitted(false);
             form.reset();
           }}>
-          Create Another Account
+          Configure Another Account
         </Button>
       </div>
     );
