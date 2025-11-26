@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, PlusCircle, Trash2, Eye } from 'lucide-react';
+import { Loader2, LogOut, PlusCircle, Trash2, Eye, KeyRound } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
@@ -41,6 +41,7 @@ import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
+import { resetPassword } from '@/ai/flows/reset-password-flow';
 
 
 export const dynamic = 'force-dynamic';
@@ -82,11 +83,13 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
     const [details, setDetails] = useState<PaymentDetails | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [payments, setPayments] = useState<any[]>([]);
 
     const fetchPaymentDetails = async () => {
         if (!firestore) return;
         setIsLoading(true);
         setError(null);
+        setPayments([]);
         
         const llrApplicationsRef = collection(firestore, 'llr_applications');
         const q = query(
@@ -97,7 +100,7 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
         try {
           const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                const applications = querySnapshot.docs.map(doc => doc.data());
+                const applications = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                 applications.sort((a, b) => {
                     const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
                     const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate().getTime() : 0;
@@ -113,6 +116,16 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
                     : "Not set";
                 
                 setDetails({ totalFee, paidAmount, pendingAmount, paymentDueDate });
+
+                 // Fetch payment history subcollection
+                const paymentsRef = collection(firestore, 'llr_applications', latestApplication.id, 'payments');
+                const paymentsSnapshot = await getDocs(paymentsRef);
+                const paymentsData = paymentsSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id
+                }));
+                setPayments(paymentsData);
+
             } else {
                 setDetails({ totalFee: 0, paidAmount: 0, pendingAmount: 0, paymentDueDate: "No application found" });
             }
@@ -135,7 +148,7 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
                     <Eye className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Transaction History</DialogTitle>
                     <DialogDescription>
@@ -146,25 +159,56 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
                     {isLoading && <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                     {error && <p className="text-sm text-destructive">{error}</p>}
                     {details && !isLoading && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <p className="text-sm text-muted-foreground">Total Fee</p>
-                                <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
-                            </div>
-                             <div className="flex justify-between items-center">
-                                <p className="text-sm text-muted-foreground">Amount Paid</p>
-                                <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                        <div className="space-y-6">
+                           <Card className="bg-muted/50">
+                                <CardContent className="p-4 grid grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Total Fee</p>
+                                        <p className="text-lg font-semibold">₹{details.totalFee.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Paid</p>
+                                        <p className="text-lg font-semibold text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Pending</p>
+                                        <p className="text-lg font-semibold text-destructive">₹{details.pendingAmount.toFixed(2)}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <div className="text-sm">
+                                <p className="text-muted-foreground">Payment Due: <span className="font-medium text-foreground">{details.paymentDueDate}</span></p>
                             </div>
                             <Separator />
-                            <div className="flex justify-between items-center">
-                                <p className="text-sm font-medium">Pending Amount</p>
-                                <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
-                            </div>
-                            <Separator />
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
-                                <p className="text-lg font-semibold">{details.paymentDueDate}</p>
-                            </div>
+                             <div>
+                                <h4 className="text-md font-semibold mb-2">Payment History</h4>
+                                {payments.length > 0 ? (
+                                     <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Amount</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {payments.map(payment => (
+                                                    <TableRow key={payment.id}>
+                                                        <TableCell>
+                                                            {payment.paidAt instanceof Timestamp 
+                                                                ? format(payment.paidAt.toDate(), "PP")
+                                                                : "N/A"}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-medium">₹{payment.amount.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-center py-4 text-muted-foreground">No payment history found.</p>
+                                )}
+                             </div>
                         </div>
                     )}
                 </div>
@@ -177,12 +221,10 @@ function UserList() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isResetting, setIsResetting] = useState<string | null>(null);
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // The 'disabled' check was removed to prevent a query error,
-        // as Firestore does not allow multiple '!=' filters.
-        // The filtering for disabled users is now handled on the client side.
         return query(
           collection(firestore, 'users'),
           where('username', '!=', 'admin'),
@@ -214,8 +256,6 @@ function UserList() {
                 batch.delete(appDoc.ref);
             });
 
-            // Instead of deleting the user document, we mark it as disabled.
-            // This prevents them from logging in and hides them from the list.
             batch.update(userDocRef, { disabled: true });
             
             await batch.commit();
@@ -229,6 +269,34 @@ function UserList() {
             errorEmitter.emit('permission-error', contextualError);
         } finally {
             setIsDeleting(null);
+        }
+    };
+
+    const handleResetPassword = async (userId: string, email: string) => {
+        setIsResetting(userId);
+        try {
+            const result = await resetPassword(email);
+            if (result.success) {
+                toast({
+                    title: "Password Reset Initiated",
+                    description: result.message,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Password Reset Failed",
+                    description: result.message,
+                });
+            }
+        } catch (error) {
+            console.error("Failed to trigger password reset flow:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "An unexpected error occurred while trying to reset the password.",
+            });
+        } finally {
+            setIsResetting(null);
         }
     };
 
@@ -280,6 +348,27 @@ function UserList() {
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
                                             <TransactionHistoryDialog userId={user.id} />
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" disabled={isResetting === user.id}>
+                                                        {isResetting === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Reset Password?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This will send a password reset link to the user's email address ({user.email}). Are you sure you want to proceed?
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleResetPassword(user.id, user.email)}>
+                                                            Send Reset Email
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" disabled={isDeleting === user.id}>
