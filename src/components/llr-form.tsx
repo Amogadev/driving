@@ -57,7 +57,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 
 const formSchema = z.object({
@@ -126,81 +127,82 @@ export function LLRForm() {
     }
     
     setLoading(true);
-    try {
-      const applicationsCollection = collection(firestore, 'llr_applications');
-      const snapshot = await getDocs(applicationsCollection);
-      
-      let maxId = 0;
-      snapshot.forEach(doc => {
-        const docId = doc.data().applicationId;
-        if (docId && docId.startsWith('DW-LLR-')) {
-          const numPart = parseInt(docId.replace('DW-LLR-', ''), 10);
-          if (!isNaN(numPart) && numPart > maxId) {
-            maxId = numPart;
-          }
+    
+    const applicationsCollection = collection(firestore, 'llr_applications');
+    const snapshot = await getDocs(applicationsCollection);
+    
+    let maxId = 0;
+    snapshot.forEach(doc => {
+      const docId = doc.data().applicationId;
+      if (docId && docId.startsWith('DW-LLR-')) {
+        const numPart = parseInt(docId.replace('DW-LLR-', ''), 10);
+        if (!isNaN(numPart) && numPart > maxId) {
+          maxId = numPart;
         }
+      }
+    });
+
+    const newIdNumber = maxId + 1;
+    const newApplicationId = `DW-LLR-${String(newIdNumber).padStart(3, '0')}`;
+    
+    const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
+    const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
+    
+    const submittedAtDate = new Date();
+    const paymentDueDate = addDays(submittedAtDate, 15);
+
+    const applicationData = {
+      applicationId: newApplicationId,
+      applicantId: user.uid, // Use the UID of the currently logged-in user
+      fullName: values.username,
+      fatherName: values.fatherName,
+      gender: values.gender,
+      dob: values.dob ? format(values.dob, "yyyy-MM-dd") : null,
+      bloodGroup: values.bloodGroup,
+      phone: values.phone,
+      email: values.email,
+      address: {
+          doorNo: values.doorNo,
+          streetName: values.streetName,
+          villageOrTown: values.villageOrTown,
+          taluk: values.taluk,
+          district: values.district,
+          pincode: values.pincode,
+      },
+      classOfVehicle: values.classOfVehicle,
+      photo: photoFile ? {
+        name: photoFile.name,
+        size: photoFile.size,
+        type: photoFile.type,
+      } : null,
+      signature: signatureFile ? {
+          name: signatureFile.name,
+          size: signatureFile.size,
+          type: signatureFile.type,
+      } : null,
+      totalFee: values.totalFee,
+      paidAmount: values.paidAmount,
+      paymentStatus: values.paymentStatus || 'Unpaid',
+      status: "Submitted",
+      submittedAt: serverTimestamp(),
+      paymentDueDate: format(paymentDueDate, "yyyy-MM-dd"),
+    };
+
+    addDoc(applicationsCollection, applicationData)
+      .then(() => {
+        setApplicationId(newApplicationId);
+        setSubmitted(true);
+        setLoading(false);
+      })
+      .catch((e: any) => {
+        const contextualError = new FirestorePermissionError({
+            path: applicationsCollection.path,
+            operation: 'create',
+            requestResourceData: applicationData
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        setLoading(false);
       });
-
-      const newIdNumber = maxId + 1;
-      const newApplicationId = `DW-LLR-${String(newIdNumber).padStart(3, '0')}`;
-      
-      const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
-      const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
-      
-      const submittedAtDate = new Date();
-      const paymentDueDate = addDays(submittedAtDate, 15);
-
-      const applicationData = {
-        applicationId: newApplicationId,
-        applicantId: user.uid, // Use the UID of the currently logged-in user
-        fullName: values.username,
-        fatherName: values.fatherName,
-        gender: values.gender,
-        dob: values.dob ? format(values.dob, "yyyy-MM-dd") : null,
-        bloodGroup: values.bloodGroup,
-        phone: values.phone,
-        email: values.email,
-        address: {
-            doorNo: values.doorNo,
-            streetName: values.streetName,
-            villageOrTown: values.villageOrTown,
-            taluk: values.taluk,
-            district: values.district,
-            pincode: values.pincode,
-        },
-        classOfVehicle: values.classOfVehicle,
-        photo: photoFile ? {
-          name: photoFile.name,
-          size: photoFile.size,
-          type: photoFile.type,
-        } : null,
-        signature: signatureFile ? {
-            name: signatureFile.name,
-            size: signatureFile.size,
-            type: signatureFile.type,
-        } : null,
-        totalFee: values.totalFee,
-        paidAmount: values.paidAmount,
-        paymentStatus: values.paymentStatus || 'Unpaid',
-        status: "Submitted",
-        submittedAt: serverTimestamp(),
-        paymentDueDate: format(paymentDueDate, "yyyy-MM-dd"),
-      };
-
-      addDocumentNonBlocking(applicationsCollection, applicationData);
-      
-      setApplicationId(newApplicationId);
-      setSubmitted(true);
-    } catch (error) {
-      console.error("Error submitting application: ", error);
-      toast({
-        variant: "destructive",
-        title: "Submission Failed",
-        description: "Could not submit your application. Please check your connection and try again.",
-      });
-    } finally {
-      setLoading(false);
-    }
   }
 
   if (submitted) {
@@ -681,6 +683,8 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
 
