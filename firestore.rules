@@ -1,3 +1,4 @@
+
 /**
  * Core Philosophy: This ruleset is designed for a public data submission portal.
  * It operates on a "write-once, read-many" principle. The primary goal is to
@@ -69,7 +70,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isAdmin() || request.auth.uid == userId;
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow write: if isAdmin() || request.auth.uid == userId;
     }
   }
 }
