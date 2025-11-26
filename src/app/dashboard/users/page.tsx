@@ -421,6 +421,56 @@ function AdminUserList() {
 //   Regular User-Specific View
 // =====================================================================
 
+function ApplicationDetailsDialog({ application }: { application: any }) {
+  const details = {
+    totalFee: application.totalFee || 0,
+    paidAmount: application.paidAmount || 0,
+    pendingAmount: (application.totalFee || 0) - (application.paidAmount || 0),
+    paymentDueDate: application.paymentDueDate ? format(new Date(application.paymentDueDate), 'PPP') : "Not set",
+  };
+
+  return (
+    <Dialog>
+        <DialogTrigger asChild>
+            <Button variant="ghost" size="icon">
+                <Eye className="h-4 w-4" />
+            </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Application Details</DialogTitle>
+                <DialogDescription>
+                    Payment details for application ID: {application.applicationId}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm text-muted-foreground">Total Fee</p>
+                        <p className="text-lg font-medium">₹{details.totalFee.toFixed(2)}</p>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <p className="text-sm text-muted-foreground">Amount Paid</p>
+                        <p className="text-lg font-medium text-green-600">₹{details.paidAmount.toFixed(2)}</p>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium">Pending Amount</p>
+                        <p className="text-xl font-bold">₹{details.pendingAmount.toFixed(2)}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Payment Due Date</p>
+                        <p className="text-lg font-semibold">{details.paymentDueDate}</p>
+                    </div>
+                </div>
+            </div>
+        </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function PaymentDialog({ application, onPaymentSuccess }: { application: any, onPaymentSuccess: () => void }) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -617,6 +667,7 @@ function UserApplicationsList() {
                         <TableCell>{app.paymentStatus}</TableCell>
                         <TableCell>₹{pendingAmount.toFixed(2)}</TableCell>
                         <TableCell className="text-right space-x-1">
+                          <ApplicationDetailsDialog application={app} />
                           <DialogTrigger asChild>
                             <Button variant="outline" size="sm" disabled={pendingAmount <= 0} onClick={() => handleOpenPaymentDialog(app)}>
                                 <CreditCard className="mr-2 h-4 w-4"/>
@@ -716,3 +767,5 @@ export default function UsersListPage() {
     </div>
   );
 }
+
+    
