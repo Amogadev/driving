@@ -230,7 +230,6 @@ function UserList() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Username</TableHead>
-                                <TableHead>Email</TableHead>
                                 <TableHead>Last Login</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -240,7 +239,6 @@ function UserList() {
                                 users.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.username}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
                                         <TableCell>
                                             {user.lastLogin instanceof Timestamp
                                                 ? format(user.lastLogin.toDate(), "PPpp")
@@ -282,7 +280,7 @@ function UserList() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={3} className="h-24 text-center">
                                         No user accounts found.
                                     </TableCell>
                                 </TableRow>
@@ -351,5 +349,7 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    
 
     
