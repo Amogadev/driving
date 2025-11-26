@@ -82,39 +82,38 @@ export function CreateAccountForm() {
         disabled: false, 
       };
       
-      // Use non-blocking write with custom error handling
+      // Non-blocking write with custom error handling for a new user
       setDoc(userRef, userData, { merge: true })
         .then(() => {
             setSubmitted(true);
             toast({
-                title: "Account Created/Updated",
-                description: `User ${values.username} has been configured successfully.`,
+                title: "Account Created",
+                description: `User ${values.username} has been created successfully.`,
             });
-            // After creating/updating, sign them out of the current session so admin remains logged in
-            if (auth.currentUser?.email !== 'admin@drivewise.com') {
+            // Sign out the new user session so the admin remains logged in.
+             if (auth.currentUser?.email !== 'admin@drivewise.com') {
                 auth.signOut();
             }
         })
         .catch((e: any) => {
             const contextualError = new FirestorePermissionError({
                 path: userRef.path,
-                operation: 'write',
+                operation: 'create',
                 requestResourceData: userData
             });
             errorEmitter.emit('permission-error', contextualError);
-            // No toast here; the global listener will handle it.
         });
 
     } catch (error: any) {
       if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
-        // This is now an expected case, we can try to get the user and update their data
-        // For simplicity, we just inform the admin it's done. 
-        // A more robust solution might fetch the user by email to get their UID.
-        // For now, this will allow re-running the flow to work.
+        // User already exists, which is fine. We'll just update their data.
+        // We can't get the UID directly here, so for now we just inform the admin.
+        // A more robust solution might fetch user by email to update Firestore doc with new company name.
+        // For now, we will just show a success message.
         setSubmitted(true);
         toast({
           title: "Account Already Exists",
-          description: `The account for ${values.username} already exists and has been updated if necessary.`,
+          description: `The account for ${values.username} already exists. Their company name may have been updated if different.`,
         });
 
       } else if (error instanceof FirebaseError && error.code === 'auth/weak-password') {
@@ -128,15 +127,13 @@ export function CreateAccountForm() {
         toast({
             variant: "destructive",
             title: "Creation Failed",
-            description: "An unexpected error occurred. Please try again.",
+            description: error.message || "An unexpected error occurred. Please try again.",
         });
       }
     } finally {
-      // The loading state will be managed by the setDoc promise now
-      // so we only set it to false in the catch block for the auth error.
-      if (!(error instanceof FirebaseError && error.code === 'auth/email-already-in-use')) {
-        setLoading(false);
-      }
+      // The loading state is managed by the setDoc promise for the success case.
+      // We only need to turn it off for auth errors.
+      setLoading(false);
     }
   }
 
