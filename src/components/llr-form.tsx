@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfDay, endOfDay } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +55,7 @@ import {
   Mail,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -129,20 +129,21 @@ export function LLRForm() {
     setLoading(true);
     
     const applicationsCollection = collection(firestore, 'llr_applications');
-    const snapshot = await getDocs(applicationsCollection);
     
-    let maxId = 0;
-    snapshot.forEach(doc => {
-      const docId = doc.data().applicationId;
-      if (docId && docId.startsWith('DW-LLR-')) {
-        const numPart = parseInt(docId.replace('DW-LLR-', ''), 10);
-        if (!isNaN(numPart) && numPart > maxId) {
-          maxId = numPart;
-        }
-      }
-    });
+    // Get the start and end of the current day
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
 
-    const newIdNumber = maxId + 1;
+    // Query for applications submitted today
+    const q = query(
+      applicationsCollection,
+      where('submittedAt', '>=', Timestamp.fromDate(todayStart)),
+      where('submittedAt', '<=', Timestamp.fromDate(todayEnd))
+    );
+    const todaysSnapshot = await getDocs(q);
+    const todaysCount = todaysSnapshot.size;
+
+    const newIdNumber = todaysCount + 1;
     const newApplicationId = `DW-LLR-${String(newIdNumber).padStart(3, '0')}`;
     
     const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
@@ -683,6 +684,8 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
 
