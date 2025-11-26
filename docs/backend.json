@@ -1,142 +1,65 @@
-
 {
   "entities": {
-    "LLRApplication": {
+    "LlrApplication": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LLRApplication",
+      "title": "LlrApplication",
       "type": "object",
-      "description": "Represents an application for a Learner's License (LLR).",
+      "description": "Represents a Learner's License Registration application.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the LLR application."
         },
-        "applicantDetails": {
+        "applicationId": {
           "type": "string",
-          "description": "Reference to ApplicantDetails. (Relationship: ApplicantDetails 1:1 LLRApplication)"
+          "description": "Auto-generated unique Application ID."
         },
-        "llrDocumentDetails": {
+        "applicantName": {
           "type": "string",
-          "description": "Reference to LLRDocumentDetails. (Relationship: LLRDocumentDetails 1:1 LLRApplication)"
+          "description": "Full name of the applicant."
         },
-        "applicationDate": {
+        "applicantDob": {
           "type": "string",
-          "description": "The date when the application was submitted.",
+          "description": "Date of birth of the applicant.",
+          "format": "date"
+        },
+        "applicantEmail": {
+          "type": "string",
+          "description": "Email address of the applicant.",
+          "format": "email"
+        },
+        "applicantPhone": {
+          "type": "string",
+          "description": "Phone number of the applicant."
+        },
+        "applicantAddress": {
+          "type": "string",
+          "description": "Full address of the applicant."
+        },
+        "documentAadhar": {
+          "type": "string",
+          "description": "Aadhar number of the applicant."
+        },
+        "documentOther": {
+          "type": "string",
+          "description": "Reference number of other relevant document."
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "Date and time when the application was submitted.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "applicantDetails",
-        "llrDocumentDetails",
-        "applicationDate"
-      ]
-    },
-    "ApplicantDetails": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ApplicantDetails",
-      "type": "object",
-      "description": "Details of the applicant applying for the LLR.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the applicant details."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "First name of the applicant."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Last name of the applicant."
-        },
-        "dateOfBirth": {
-          "type": "string",
-          "description": "Date of birth of the applicant.",
-          "format": "date"
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the applicant.",
-          "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "Phone number of the applicant."
-        },
-        "address": {
-          "type": "string",
-          "description": "Address of the applicant."
-        }
-      },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "dateOfBirth",
-        "email",
-        "phoneNumber",
-        "address"
-      ]
-    },
-    "LLRDocumentDetails": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LLRDocumentDetails",
-      "type": "object",
-      "description": "Details of the documents submitted for the LLR application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the document details."
-        },
-        "documentType": {
-          "type": "string",
-          "description": "Type of document submitted (e.g., Aadhar Card, Passport)."
-        },
-        "documentNumber": {
-          "type": "string",
-          "description": "Document number of the submitted document."
-        },
-        "expiryDate": {
-          "type": "string",
-          "description": "Expiry date of the document, if applicable.",
-          "format": "date"
-        }
-      },
-      "required": [
-        "id",
-        "documentType",
-        "documentNumber"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the DriveWise Academy application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "username": {
-          "type": "string",
-          "description": "Username for the user's login."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user, constructed from username.",
-          "format": "email"
-        },
-        "companyName": {
-          "type": "string",
-          "description": "Name of the company the user belongs to, if applicable."
-        }
-      },
-      "required": [
-        "id",
-        "username",
-        "email"
+        "applicationId",
+        "applicantName",
+        "applicantDob",
+        "applicantEmail",
+        "applicantPhone",
+        "applicantAddress",
+        "documentAadhar",
+        "submissionDate"
       ]
     }
   },
@@ -149,78 +72,22 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/LLR_Applications/{llraId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "LlrApplication",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/LlrApplication"
           },
-          "description": "Stores user profiles.  Authorization is path-based, ensuring only the authenticated user can access their own profile.",
+          "description": "Stores LLR application data.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/llr_applications/{applicationId}",
-        "definition": {
-          "entityName": "LLRApplication",
-          "schema": {
-            "$ref": "#/backend/entities/LLRApplication"
-          },
-          "description": "Stores LLR application data. Includes the denormalized 'applicantId' for authorization independence.",
-          "params": [
-            {
-              "name": "applicationId",
-              "description": "The unique identifier of the LLR application."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/applicant_details/{applicantDetailsId}",
-        "definition": {
-          "entityName": "ApplicantDetails",
-          "schema": {
-            "$ref": "#/backend/entities/ApplicantDetails"
-          },
-          "description": "Stores applicant details related to a user.  Authorization is based on the user ID in the path.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "applicantDetailsId",
-              "description": "The unique identifier for the applicant details."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/llr_document_details/{llrDocumentDetailsId}",
-        "definition": {
-          "entityName": "LLRDocumentDetails",
-          "schema": {
-            "$ref": "#/backend/entities/LLRDocumentDetails"
-          },
-          "description": "Stores LLR document details related to a user.  Authorization is based on the user ID in the path.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "llrDocumentDetailsId",
-              "description": "The unique identifier for the LLR document details."
+              "name": "llraId",
+              "description": "Unique identifier for the LLR application."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to accommodate the DriveWise Academy application's requirements, focusing on user authentication and LLR application data storage. It prioritizes Authorization Independence and QAPs.\n\n*   `/users/{userId}`: Stores user profiles. Authorization is path-based, ensuring only the authenticated user can access their own profile. This supports simple security rules and prevents unauthorized access.\n*   `/llr_applications/{applicationId}`: Stores LLR application data. This collection is designed to store application details submitted by users. To ensure Authorization Independence, the `applicantId` is denormalized into this document. This allows security rules to validate that the user creating the application is the owner of the application data without needing to perform `get()` operations.\n*   `/users/{userId}/applicant_details/{applicantDetailsId}`: Stores applicant details related to a user. Authorization is based on the user ID in the path, ensuring only the authenticated user can access their applicant details. This structure facilitates QAPs by isolating user-specific data, enabling secure listing and filtering operations.\n*   `/users/{userId}/llr_document_details/{llrDocumentDetailsId}`: Stores LLR document details related to a user. This structure ensures that the document details are associated with a specific user and are only accessible to that user.\n\nThis structure ensures authorization independence by denormalizing relevant data, enables QAPs through structural segregation, and maintains data clarity with explicit state modeling and predictable schema."
+    "reasoning": "Given the requirement for a LLR Registration form and storing the application data in Firestore, a simple collection-based structure is recommended. The application stores LLR application data in the `LLR_Applications` collection. There is no user-specific data or complex relationships to manage, so a flat structure is appropriate. The application stores the data directly to firestore and there are no users so it is unnecessary to implement the Authorization Independence and other complex strategies. The app's only purpose is to display the password along with the username if user forget the password. Although that is not ideal from the security perspective it is a requirement."
   }
 }
