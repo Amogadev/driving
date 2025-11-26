@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, PlusCircle, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CreateAccountForm } from '@/components/create-account-form';
-import { collection, query, where, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, deleteDoc, Timestamp, writeBatch, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 export const dynamic = 'force-dynamic';
@@ -89,11 +91,33 @@ function UserList() {
         }
         setIsDeleting(userId);
         try {
-            await deleteDoc(doc(firestore, "users", userId));
-            toast({ title: "User Deleted", description: "The user account has been successfully removed." });
+            const batch = writeBatch(firestore);
+
+            // 1. Find all applications for the user
+            const appsQuery = query(collection(firestore, 'llr_applications'), where('applicantId', '==', userId));
+            const appsSnapshot = await getDocs(appsQuery);
+
+            // 2. Add all applications to the delete batch
+            appsSnapshot.forEach((appDoc) => {
+                batch.delete(appDoc.ref);
+            });
+
+            // 3. Add the user document to the delete batch
+            const userDocRef = doc(firestore, "users", userId);
+            batch.delete(userDocRef);
+
+            // 4. Commit the batch
+            await batch.commit();
+
+            toast({ title: "User Deleted", description: "The user account and all their data have been permanently removed." });
         } catch (e: any) {
-            console.error("Error deleting user:", e);
-            toast({ variant: "destructive", title: "Deletion Failed", description: e.message });
+            console.error("Error deleting user and their data:", e);
+             const contextualError = new FirestorePermissionError({
+                operation: 'delete',
+                path: `users/${userId} and related applications`,
+             });
+             errorEmitter.emit('permission-error', contextualError);
+            toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete user. You may lack permissions." });
         } finally {
             setIsDeleting(null);
         }
@@ -159,7 +183,7 @@ function UserList() {
                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                     <AlertDialogDescription>
                                                         This action cannot be undone. This will permanently delete the user account
-                                                        and remove their data from our servers.
+                                                        and all associated application data.
                                                     </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
@@ -244,3 +268,5 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    

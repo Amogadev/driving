@@ -5,7 +5,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth, useUser, errorEmitter } from "@/firebase";
+import { useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 
@@ -55,10 +55,9 @@ import {
   Mail,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 const formSchema = z.object({
@@ -234,7 +233,7 @@ export function LLRForm() {
                             name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Username</FormLabel>
+                                <FormLabel>Applicant Name</FormLabel>
                                 <FormControl>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -670,3 +669,5 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    

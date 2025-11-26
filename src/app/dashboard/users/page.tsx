@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import {
   Table,
@@ -27,14 +27,26 @@ import {
     DialogTitle,
     DialogTrigger,
   } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Search, ArrowUpDown, Eye } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, ArrowUpDown, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 export const dynamic = 'force-dynamic';
 
@@ -408,6 +420,8 @@ function AdminUserList() {
 function UserApplicationsList() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const applicationsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -422,6 +436,29 @@ function UserApplicationsList() {
   }, [firestore, user]);
 
   const { data: currentUser, isLoading: isUserDocLoading } = useDoc(userDocRef);
+  
+  const handleDeleteApplication = async (appId: string) => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not available.' });
+      return;
+    }
+    setIsDeleting(appId);
+    try {
+      const appRef = doc(firestore, 'llr_applications', appId);
+      await deleteDoc(appRef);
+      toast({ title: 'Application Deleted', description: 'The application has been successfully removed.' });
+    } catch (e: any) {
+      console.error('Error deleting application:', e);
+      const contextualError = new FirestorePermissionError({
+        operation: 'delete',
+        path: `llr_applications/${appId}`,
+      });
+      errorEmitter.emit('permission-error', contextualError);
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Could not delete application.' });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   return (
     <Card>
@@ -446,12 +483,13 @@ function UserApplicationsList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
+                  <TableHead>Applicant Name</TableHead>
                   <TableHead>Company Name</TableHead>
                   <TableHead>Application ID</TableHead>
                   <TableHead>Submitted On</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Pending Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -470,12 +508,42 @@ function UserApplicationsList() {
                         </TableCell>
                         <TableCell>{app.status}</TableCell>
                         <TableCell>₹{pendingAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" disabled={isDeleting === app.id}>
+                                {isDeleting === app.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 text-destructive/70" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete this application.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteApplication(app.id)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       You have not submitted any applications yet.
                     </TableCell>
                   </TableRow>
