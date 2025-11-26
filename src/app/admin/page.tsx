@@ -36,6 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -217,11 +219,43 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
     );
 }
 
+function ResetPasswordDialog({ user, onReset }: { user: any, onReset: (email: string) => void }) {
+    const [email, setEmail] = useState(user.email || '');
+
+    return (
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Reset Password for {user.username}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Enter the email address to send the password reset link to. It has been pre-filled with the user's registered email.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+                <Label htmlFor="email-reset">Email Address</Label>
+                <Input
+                    id="email-reset"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter email address"
+                />
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onReset(email)}>
+                    Send Reset Email
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    );
+}
+
+
 function UserList() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isResetting, setIsResetting] = useState<string | null>(null);
+    const [userToReset, setUserToReset] = useState<any | null>(null);
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -272,16 +306,18 @@ function UserList() {
         }
     };
 
-    const handleResetPassword = async (userId: string, email: string) => {
+    const handleResetPassword = async (email: string) => {
         if (!email) {
             toast({
                 variant: "destructive",
                 title: "Missing Email",
-                description: "This user does not have an email address to send a reset link to.",
+                description: "Please enter an email address to send the reset link to.",
             });
             return;
         }
-        setIsResetting(userId);
+        if (!userToReset) return;
+
+        setIsResetting(userToReset.id);
         try {
             const result = await resetPassword(email);
             if (result.success) {
@@ -305,6 +341,7 @@ function UserList() {
             });
         } finally {
             setIsResetting(null);
+            setUserToReset(null);
         }
     };
 
@@ -356,26 +393,13 @@ function UserList() {
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
                                             <TransactionHistoryDialog userId={user.id} />
-                                             <AlertDialog>
+                                             <AlertDialog onOpenChange={(open) => !open && setUserToReset(null)}>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={isResetting === user.id}>
+                                                    <Button variant="ghost" size="icon" disabled={isResetting === user.id} onClick={() => setUserToReset(user)}>
                                                         {isResetting === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                                     </Button>
                                                 </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Reset Password?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This will send a password reset link to the user's email address ({user.email}). Are you sure you want to proceed?
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleResetPassword(user.id, user.email)}>
-                                                            Send Reset Email
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
+                                                {userToReset && userToReset.id === user.id && <ResetPasswordDialog user={userToReset} onReset={handleResetPassword} />}
                                             </AlertDialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
