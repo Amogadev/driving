@@ -1,72 +1,21 @@
 
-/**
- * Core Philosophy: This ruleset is designed for a public data submission portal.
- * It operates on a "write-once, read-many" principle. The primary goal is to
- * allow anyone to submit a Learner's License Registration (LLR) application
- * while ensuring that once an application is submitted, its integrity is
- * preserved by making it immutable.
- *
- * Data Structure: A single, flat collection named `LLR_Applications` stores
- * all submitted application data. There are no user-specific subcollections
- * or complex relationships.
- *
- * Key Security Decisions:
- * - Public Read Access: All submitted applications are publicly readable by anyone,
- *   including unauthenticated users. This is based on the requirement that
- *   data needs to be displayed, implying it's not considered private.
- * - Authenticated Creation: To provide a minimal barrier against automated spam
- *   or abuse, only authenticated sessions (including anonymous ones) are permitted
- *   to create new applications.
- * - Immutability by Default: In the absence of a defined user ownership or
- *   admin role model, all `update` and `delete` operations are explicitly
-
- *   denied. This is the most secure posture, preventing any user from tampering
- *   with or deleting data they do not own.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper Functions
-
-    /**
-     * Checks if the user is authenticated, including anonymous sessions.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
     
-    /**
-     * Checks if the authenticated user is an administrator.
-     */
     function isAdmin() {
       return request.auth.token.email == 'admin@drivewise.com';
     }
 
-    /**
-     * @description Rules for the LLR Applications collection. This collection is
-     *              treated as a public submission box. Anyone can read all
-     *              applications, and any authenticated session (including
-     *              anonymous) can submit a new application. Once submitted,
-     *              applications are immutable and cannot be changed or deleted
-     *              to preserve data integrity.
-     * @path        /LLR_Applications/{llraId}
-     * @allow       (create) A new, anonymous user submits their LLR application.
-     * @allow       (get) Any user, signed-in or not, reads an existing application.
-     * @deny        (update) Any user attempts to change the details of a submitted application.
-     * @principle   Implements a write-once, read-many pattern for public data
-     *              submission, disabling all modifications to ensure data
-     *              integrity after creation.
-     */
     match /LLR_Applications/{llraId} {
-      // READ: Anyone can get or list LLR applications.
-      allow get: if true;
-      allow list: if true;
-
-      // WRITE: Only an authenticated session can create. Updates and deletes are disallowed.
+      allow get, list: if true;
       allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow update, delete: if false;
     }
 
     match /users/{userId} {
