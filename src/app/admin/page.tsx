@@ -223,6 +223,10 @@ function TransactionHistoryDialog({ userId }: { userId: string }) {
 function NotesDialog({ user, onSave }: { user: any, onSave: (notes: string) => void }) {
     const [notes, setNotes] = useState(user.notes || '');
 
+    const handleSave = () => {
+        onSave(notes);
+    };
+
     return (
         <DialogContent>
             <DialogHeader>
@@ -245,7 +249,7 @@ function NotesDialog({ user, onSave }: { user: any, onSave: (notes: string) => v
                 <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button onClick={() => onSave(notes)}>
+                <Button onClick={handleSave}>
                     Save Notes
                 </Button>
             </DialogFooter>
@@ -310,30 +314,35 @@ function UserList() {
         }
     };
 
-    const handleSaveNotes = async (notes: string) => {
+    const handleSaveNotes = (notes: string) => {
         if (!firestore || !userForNotes) return;
-
+    
         setIsSavingNotes(userForNotes.id);
         const userDocRef = doc(firestore, "users", userForNotes.id);
-
-        try {
-            await updateDoc(userDocRef, { notes: notes });
-            toast({
-                title: "Notes Saved",
-                description: `Notes for ${userForNotes.username} have been updated.`,
+    
+        // Use non-blocking update with .catch for error handling
+        updateDoc(userDocRef, { notes: notes })
+            .then(() => {
+                toast({
+                    title: "Notes Saved",
+                    description: `Notes for ${userForNotes.username} have been updated.`,
+                });
+                forceRefetch(); // Refetch users to get the latest notes
+            })
+            .catch((e: any) => {
+                // The global error handler will catch this, but you could still
+                // show a toast if you want specific UI feedback on failure.
+                const contextualError = new FirestorePermissionError({
+                    operation: 'update',
+                    path: userDocRef.path,
+                    requestResourceData: { notes },
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            })
+            .finally(() => {
+                setIsSavingNotes(null);
+                setUserForNotes(null);
             });
-            forceRefetch(); // Refetch users to get the latest notes
-        } catch (e: any) {
-            const contextualError = new FirestorePermissionError({
-                operation: 'update',
-                path: userDocRef.path,
-                requestResourceData: { notes },
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        } finally {
-            setIsSavingNotes(null);
-            setUserForNotes(null);
-        }
     };
 
 
@@ -488,3 +497,5 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    
