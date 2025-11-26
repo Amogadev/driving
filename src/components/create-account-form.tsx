@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { doc, setDoc } from "firebase/firestore";
 import { FirebaseError } from 'firebase/app';
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 
 const formSchema = z.object({
@@ -77,27 +79,38 @@ export function CreateAccountForm() {
         username: values.username,
         email: email,
         companyName: values.companyName,
-        disabled: false, // Ensure new/updated accounts are enabled
+        disabled: false, 
       };
       
-      await setDoc(userRef, userData, { merge: true });
-      
-      setSubmitted(true);
-      toast({
-        title: "Account Created/Updated",
-        description: `User ${values.username} has been configured successfully.`,
-      });
-
-      // After creating/updating, sign them out of the current session so admin remains logged in
-      if (auth.currentUser?.email !== 'admin@drivewise.com') {
-          await auth.signOut();
-      }
+      // Use non-blocking write with custom error handling
+      setDoc(userRef, userData, { merge: true })
+        .then(() => {
+            setSubmitted(true);
+            toast({
+                title: "Account Created/Updated",
+                description: `User ${values.username} has been configured successfully.`,
+            });
+            // After creating/updating, sign them out of the current session so admin remains logged in
+            if (auth.currentUser?.email !== 'admin@drivewise.com') {
+                auth.signOut();
+            }
+        })
+        .catch((e: any) => {
+            const contextualError = new FirestorePermissionError({
+                path: userRef.path,
+                operation: 'write',
+                requestResourceData: userData
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            // No toast here; the global listener will handle it.
+        });
 
     } catch (error: any) {
       if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
-        // This is expected if the user exists. We can treat this as a success for the user.
-        // We can proceed to update their data in firestore, but that requires their UID.
-        // For simplicity, we'll just inform the admin it's done.
+        // This is now an expected case, we can try to get the user and update their data
+        // For simplicity, we just inform the admin it's done. 
+        // A more robust solution might fetch the user by email to get their UID.
+        // For now, this will allow re-running the flow to work.
         setSubmitted(true);
         toast({
           title: "Account Already Exists",
@@ -119,7 +132,11 @@ export function CreateAccountForm() {
         });
       }
     } finally {
-      setLoading(false);
+      // The loading state will be managed by the setDoc promise now
+      // so we only set it to false in the catch block for the auth error.
+      if (!(error instanceof FirebaseError && error.code === 'auth/email-already-in-use')) {
+        setLoading(false);
+      }
     }
   }
 
