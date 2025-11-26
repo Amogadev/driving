@@ -75,10 +75,11 @@ function UserList() {
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
+        // This query now correctly filters out users that are marked as disabled.
         return query(
           collection(firestore, 'users'),
           where('username', '!=', 'admin'),
-          where('disabled', '!=', true), // Do not show disabled/deleted users
+          where('disabled', '!=', true), 
           orderBy('username', 'asc')
         );
     }, [firestore]);
@@ -96,31 +97,25 @@ function UserList() {
             const batch = writeBatch(firestore);
             const userDocRef = doc(firestore, "users", userId);
 
-            // Find all LLR applications for the user to delete them.
             const appsQuery = query(collection(firestore, 'llr_applications'), where('applicantId', '==', userId));
             const appsSnapshot = await getDocs(appsQuery);
             appsSnapshot.forEach((appDoc) => {
                 batch.delete(appDoc.ref);
             });
 
-            // Mark the user document as disabled instead of deleting.
+            // Instead of deleting the user document, we mark it as disabled.
+            // This prevents them from logging in and hides them from the list.
             batch.update(userDocRef, { disabled: true });
             
-            // Commit the batch write.
             await batch.commit();
 
-            toast({ title: "User Deleted", description: "The user account has been disabled and all their data has been removed." });
+            toast({ title: "User Account Disabled", description: "The user account has been disabled and all their data has been removed." });
         } catch (e: any) {
-            // Create a rich, contextual error for easier debugging.
-            // This is better than a generic "permissions" error.
             const contextualError = new FirestorePermissionError({
                 operation: 'delete',
-                // This path gives a clear idea of what the operation was trying to do.
                 path: `user (${userId}) and their applications`, 
             });
-            // Emit the error for the global listener to catch and display.
             errorEmitter.emit('permission-error', contextualError);
-            // We no longer show a toast here because the global listener will handle it.
         } finally {
             setIsDeleting(null);
         }
@@ -185,14 +180,14 @@ function UserList() {
                                                     <AlertDialogHeader>
                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently delete the user's data
-                                                        and block them from logging in again.
+                                                        This action cannot be undone. This will permanently disable the user's account
+                                                        and delete all their associated application data.
                                                     </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                     <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="bg-destructive hover:bg-destructive/90">
-                                                        Delete
+                                                        Disable Account
                                                     </AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>

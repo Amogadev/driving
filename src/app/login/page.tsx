@@ -91,7 +91,7 @@ export default function LoginPage() {
         return;
     }
 
-    // Check if the user account is disabled before attempting to sign in
+    // CRITICAL: Before attempting login, check if the account is disabled.
     if (values.username !== 'admin') {
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('username', '==', values.username));
@@ -99,6 +99,7 @@ export default function LoginPage() {
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
                 const userDoc = querySnapshot.docs[0];
+                // If the 'disabled' flag is true, block the login.
                 if (userDoc.data().disabled) {
                     toast({
                         variant: 'destructive',
@@ -106,12 +107,12 @@ export default function LoginPage() {
                         description: 'This account has been disabled by an administrator.',
                     });
                     setIsSubmitting(false);
-                    return;
+                    return; // Stop the login process here.
                 }
             }
         } catch (e) {
             console.error("Error checking user status:", e);
-            // We proceed to login, Auth will handle if user doesn't exist
+            // Proceed to login, Auth will handle if user doesn't exist
         }
     }
 
