@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import {
   Table,
@@ -26,6 +26,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogFooter,
+    DialogClose
   } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -40,13 +42,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Search, ArrowUpDown, Eye, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, ArrowUpDown, Eye, Trash2, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export const dynamic = 'force-dynamic';
 
@@ -417,18 +421,115 @@ function AdminUserList() {
 //   Regular User-Specific View
 // =====================================================================
 
+function PaymentDialog({ application, onPaymentSuccess }: { application: any, onPaymentSuccess: () => void }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const pendingAmount = (application.totalFee || 0) - (application.paidAmount || 0);
+  const [amountToPay, setAmountToPay] = useState(pendingAmount);
+
+  const handlePayment = async () => {
+    if (!firestore || !application.id) return;
+    setIsProcessing(true);
+
+    const appRef = doc(firestore, 'llr_applications', application.id);
+    const newPaidAmount = (application.paidAmount || 0) + amountToPay;
+    const isFullyPaid = newPaidAmount >= (application.totalFee || 0);
+
+    const updatedData = {
+      paidAmount: newPaidAmount,
+      paymentStatus: isFullyPaid ? "Paid" : "Partially Paid",
+    };
+
+    try {
+      await updateDoc(appRef, updatedData);
+      toast({
+        title: "Payment Successful",
+        description: `₹${amountToPay.toFixed(2)} has been paid for application ${application.applicationId}.`,
+      });
+      onPaymentSuccess();
+    } catch (e: any) {
+      const contextualError = new FirestorePermissionError({
+        path: appRef.path,
+        operation: 'update',
+        requestResourceData: updatedData,
+      });
+      errorEmitter.emit('permission-error', contextualError);
+      toast({ variant: "destructive", title: "Payment Failed", description: "Could not process your payment." });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Make a Payment</DialogTitle>
+        <DialogDescription>
+          You are paying for application ID: {application.applicationId}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="py-4 space-y-4">
+        <div className="flex justify-between items-baseline">
+          <Label>Total Fee:</Label>
+          <span className="font-semibold">₹{(application.totalFee || 0).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-baseline">
+          <Label>Already Paid:</Label>
+          <span className="font-semibold text-green-600">₹{(application.paidAmount || 0).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-baseline">
+          <Label className="font-bold">Pending Amount:</Label>
+          <span className="font-bold text-lg">₹{pendingAmount.toFixed(2)}</span>
+        </div>
+        <Separator />
+        <div className="space-y-2">
+            <Label htmlFor="amount" className="font-semibold">Amount to Pay</Label>
+            <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                <Input
+                    id="amount"
+                    type="number"
+                    value={amountToPay}
+                    onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setAmountToPay(val > pendingAmount ? pendingAmount : val);
+                    }}
+                    max={pendingAmount}
+                    className="pl-8 font-bold text-lg"
+                />
+            </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+            <Button variant="outline" disabled={isProcessing}>Cancel</Button>
+        </DialogClose>
+        <Button onClick={handlePayment} disabled={isProcessing || amountToPay <= 0}>
+          {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+          Pay ₹{amountToPay.toFixed(2)}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+
 function UserApplicationsList() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<any | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+
 
   const applicationsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'llr_applications'), where('applicantId', '==', user.uid));
   }, [firestore, user]);
 
-  const { data: applications, isLoading, error } = useCollection(applicationsQuery);
+  const { data: applications, isLoading, error, forceRefetch } = useCollection(applicationsQuery);
   
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -459,6 +560,12 @@ function UserApplicationsList() {
       setIsDeleting(null);
     }
   };
+  
+  const handleOpenPaymentDialog = (app: any) => {
+    setSelectedApp(app);
+    setIsPaymentDialogOpen(true);
+  };
+
 
   return (
     <Card>
@@ -479,6 +586,7 @@ function UserApplicationsList() {
           </div>
         )}
         {!isLoading && !isUserLoading && !error && (
+          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
           <div className="border rounded-md">
             <Table>
               <TableHeader>
@@ -506,9 +614,15 @@ function UserApplicationsList() {
                             ? format(app.submittedAt.toDate(), "PP") 
                             : "N/A"}
                         </TableCell>
-                        <TableCell>{app.status}</TableCell>
+                        <TableCell>{app.paymentStatus}</TableCell>
                         <TableCell>₹{pendingAmount.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={pendingAmount <= 0} onClick={() => handleOpenPaymentDialog(app)}>
+                                <CreditCard className="mr-2 h-4 w-4"/>
+                                Pay Now
+                            </Button>
+                          </DialogTrigger>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" disabled={isDeleting === app.id}>
@@ -551,6 +665,16 @@ function UserApplicationsList() {
               </TableBody>
             </Table>
           </div>
+           {selectedApp && (
+              <PaymentDialog 
+                application={selectedApp} 
+                onPaymentSuccess={() => {
+                  setIsPaymentDialogOpen(false);
+                  setSelectedApp(null);
+                }} 
+              />
+            )}
+          </Dialog>
         )}
       </CardContent>
     </Card>
@@ -592,5 +716,3 @@ export default function UsersListPage() {
     </div>
   );
 }
-
-    
