@@ -35,7 +35,7 @@ import { Loader2, LogIn, Eye, EyeOff, User as UserIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { FirebaseError } from 'firebase/app';
 import Image from 'next/image';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +84,37 @@ export default function LoginPage() {
     setIsSubmitting(true);
     const email = `${values.username}@drivewise.com`;
     const password = values.password;
+
+    if (!firestore || !auth) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase is not initialized.' });
+        setIsSubmitting(false);
+        return;
+    }
+
+    // Check if the user account is disabled before attempting to sign in
+    if (values.username !== 'admin') {
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('username', '==', values.username));
+        try {
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
+                if (userDoc.data().disabled) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Account Disabled',
+                        description: 'This account has been disabled by an administrator.',
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Error checking user status:", e);
+            // We proceed to login, Auth will handle if user doesn't exist
+        }
+    }
+
 
     try {
       await initiateEmailSignIn(auth, email, password);
@@ -271,3 +302,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

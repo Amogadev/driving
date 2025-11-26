@@ -78,6 +78,7 @@ function UserList() {
         return query(
           collection(firestore, 'users'),
           where('username', '!=', 'admin'),
+          where('disabled', '!=', true), // Do not show disabled/deleted users
           orderBy('username', 'asc')
         );
     }, [firestore]);
@@ -91,7 +92,6 @@ function UserList() {
         }
         setIsDeleting(userId);
         try {
-            // This function now correctly deletes the user and all their applications.
             const batch = writeBatch(firestore);
 
             // 1. Find all LLR applications for the user.
@@ -99,26 +99,23 @@ function UserList() {
             const appsSnapshot = await getDocs(appsQuery);
 
             // 2. Add each application to the delete batch.
-            const deletedPaths: string[] = [];
             appsSnapshot.forEach((appDoc) => {
                 batch.delete(appDoc.ref);
-                deletedPaths.push(appDoc.ref.path);
             });
 
-            // 3. Add the user document itself to the delete batch.
+            // 3. Mark the user document as disabled instead of deleting.
+            // This prevents them from logging in again.
             const userDocRef = doc(firestore, "users", userId);
-            batch.delete(userDocRef);
-            deletedPaths.push(userDocRef.path);
+            batch.update(userDocRef, { disabled: true });
             
-            // 4. Commit the batch write to delete everything at once.
+            // 4. Commit the batch write.
             await batch.commit();
 
-            toast({ title: "User Deleted", description: "The user account and all their data have been permanently removed." });
+            toast({ title: "User Deleted", description: "The user account has been disabled and all their data has been removed." });
         } catch (e: any) {
-            // This provides detailed error information if the deletion fails due to permissions.
             const contextualError = new FirestorePermissionError({
                 operation: 'delete',
-                path: `batch write to delete user ${userId} and their applications`,
+                path: `user ${userId} and their applications`,
             });
             errorEmitter.emit('permission-error', contextualError);
             toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete user. You may lack permissions." });
@@ -186,8 +183,8 @@ function UserList() {
                                                     <AlertDialogHeader>
                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently delete the user account
-                                                        and all associated application data.
+                                                        This action cannot be undone. This will permanently delete the user's data
+                                                        and block them from logging in again.
                                                     </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
@@ -272,3 +269,5 @@ export default function AdminPage() {
     </AdminAuthWrapper>
   );
 }
+
+    
