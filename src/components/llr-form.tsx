@@ -348,12 +348,12 @@ export function LLRForm() {
                                         mode="single"
                                         captionLayout="dropdown-buttons"
                                         fromYear={1900}
-                                        toYear={new Date().getFullYear()}
+                                        toYear={2030}
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         defaultMonth={field.value || new Date(2000, 0)}
                                         disabled={(date) =>
-                                            date > new Date() || date < new Date("1900-01-01")
+                                            date > new Date("2030-12-31") || date < new Date("1900-01-01")
                                         }
                                         initialFocus
                                     />
@@ -681,5 +681,7 @@ export function LLRForm() {
     </Card>
   );
 }
+
+    
 
     
