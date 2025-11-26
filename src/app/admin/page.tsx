@@ -45,7 +45,6 @@ import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
 
 
 export const dynamic = 'force-dynamic';
@@ -75,153 +74,7 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-type PaymentDetails = {
-    totalFee: number;
-    paidAmount: number;
-    pendingAmount: number;
-    paymentDueDate: string | null;
-  };
-  
-function TransactionHistoryDialog({ userId }: { userId: string }) {
-    const firestore = useFirestore();
-    const [details, setDetails] = useState<PaymentDetails | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [payments, setPayments] = useState<any[]>([]);
-
-    const fetchPaymentDetails = async () => {
-        if (!firestore) return;
-        setIsLoading(true);
-        setError(null);
-        setPayments([]);
-        
-        const llrApplicationsRef = collection(firestore, 'llr_applications');
-        const q = query(
-            llrApplicationsRef, 
-            where('applicantId', '==', userId)
-        );
-
-        try {
-          const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const applications = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                applications.sort((a, b) => {
-                    const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
-                    const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate().getTime() : 0;
-                    return dateB - dateA;
-                });
-
-                const latestApplication = applications[0];
-                const totalFee = latestApplication.totalFee || 0;
-                const paidAmount = latestApplication.paidAmount || 0;
-                const pendingAmount = totalFee - paidAmount;
-                const paymentDueDate = latestApplication.paymentDueDate 
-                    ? format(new Date(latestApplication.paymentDueDate), 'PPP') 
-                    : "Not set";
-                
-                setDetails({ totalFee, paidAmount, pendingAmount, paymentDueDate });
-
-                 // Fetch payment history subcollection
-                const paymentsRef = collection(firestore, 'llr_applications', latestApplication.id, 'payments');
-                const paymentsSnapshot = await getDocs(paymentsRef);
-                const paymentsData = paymentsSnapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id
-                }));
-                setPayments(paymentsData);
-
-            } else {
-                setDetails({ totalFee: 0, paidAmount: 0, pendingAmount: 0, paymentDueDate: "No application found" });
-            }
-        } catch (e: any) {
-            const contextualError = new FirestorePermissionError({
-                operation: 'list',
-                path: `llr_applications`,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            setError("Failed to fetch payment details.");
-        } finally {
-          setIsLoading(false);
-        }
-    };
-
-    return (
-        <Dialog onOpenChange={(open) => open && fetchPaymentDetails()}>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <Eye className="h-4 w-4" />
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Transaction History</DialogTitle>
-                    <DialogDescription>
-                        Showing payment details for the user's latest application.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                    {isLoading && <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                    {details && !isLoading && (
-                        <div className="space-y-6">
-                           <Card className="bg-muted/50">
-                                <CardContent className="p-4 grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Total Fee</p>
-                                        <p className="text-lg font-semibold">₹{details.totalFee.toFixed(2)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Paid</p>
-                                        <p className="text-lg font-semibold text-green-600">₹{details.paidAmount.toFixed(2)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Pending</p>
-                                        <p className="text-lg font-semibold text-destructive">₹{details.pendingAmount.toFixed(2)}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <div className="text-sm">
-                                <p className="text-muted-foreground">Payment Due: <span className="font-medium text-foreground">{details.paymentDueDate}</span></p>
-                            </div>
-                            <Separator />
-                             <div>
-                                <h4 className="text-md font-semibold mb-2">Payment History</h4>
-                                {payments.length > 0 ? (
-                                     <div className="border rounded-md">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead className="text-right">Amount</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {payments.map(payment => (
-                                                    <TableRow key={payment.id}>
-                                                        <TableCell>
-                                                            {payment.paidAt instanceof Timestamp 
-                                                                ? format(payment.paidAt.toDate(), "PP")
-                                                                : "N/A"}
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-medium">₹{payment.amount.toFixed(2)}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-center py-4 text-muted-foreground">No payment history found.</p>
-                                )}
-                             </div>
-                        </div>
-                    )}
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function NotesDialog({ user, onSave }: { user: any, onSave: (notes: string) => void }) {
+function NotepadDialog({ user, onSave }: { user: any, onSave: (notes: string) => void }) {
     const [notes, setNotes] = useState(user.notes || '');
 
     const handleSave = () => {
@@ -259,7 +112,6 @@ function NotesDialog({ user, onSave }: { user: any, onSave: (notes: string) => v
         </DialogContent>
     );
 }
-
 
 function UserList() {
     const firestore = useFirestore();
@@ -306,6 +158,7 @@ function UserList() {
             await batch.commit();
 
             toast({ title: "User Account Disabled", description: "The user account has been disabled and all their data has been removed." });
+            forceRefetch();
         } catch (e: any) {
             const contextualError = new FirestorePermissionError({
                 operation: 'delete',
@@ -394,14 +247,13 @@ function UserList() {
                                                 : "Never"}
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
-                                            <TransactionHistoryDialog userId={user.id} />
                                              <Dialog open={userForNotes?.id === user.id} onOpenChange={(open) => !open && setUserForNotes(null)}>
                                                 <DialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" disabled={isSavingNotes === user.id} onClick={() => setUserForNotes(user)}>
                                                         {isSavingNotes === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Notebook className="h-4 w-4" />}
                                                     </Button>
                                                 </DialogTrigger>
-                                                {userForNotes && userForNotes.id === user.id && <NotesDialog user={userForNotes} onSave={handleSaveNotes} />}
+                                                {userForNotes && userForNotes.id === user.id && <NotepadDialog user={userForNotes} onSave={handleSaveNotes} />}
                                             </Dialog>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
