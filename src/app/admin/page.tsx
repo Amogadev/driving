@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, PlusCircle, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -75,16 +75,22 @@ function UserList() {
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // This query now correctly filters out users that are marked as disabled.
+        // The 'disabled' check was removed to prevent a query error,
+        // as Firestore does not allow multiple '!=' filters.
+        // The filtering for disabled users is now handled on the client side.
         return query(
           collection(firestore, 'users'),
           where('username', '!=', 'admin'),
-          where('disabled', '!=', true), 
           orderBy('username', 'asc')
         );
     }, [firestore]);
 
-    const { data: users, isLoading, error } = useCollection(usersQuery);
+    const { data: allUsers, isLoading, error } = useCollection(usersQuery);
+
+    const users = useMemo(() => {
+        if (!allUsers) return [];
+        return allUsers.filter(user => user.disabled !== true);
+    }, [allUsers]);
 
     const handleDeleteUser = async (userId: string) => {
         if (!firestore) {
