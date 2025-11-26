@@ -594,7 +594,6 @@ function UserApplicationsList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Applicant Name</TableHead>
-                  <TableHead>Company Name</TableHead>
                   <TableHead>Application ID</TableHead>
                   <TableHead>Submitted On</TableHead>
                   <TableHead>Status</TableHead>
@@ -609,7 +608,6 @@ function UserApplicationsList() {
                     return (
                       <TableRow key={app.id}>
                          <TableCell>{app.fullName || 'N/A'}</TableCell>
-                        <TableCell>{currentUser?.companyName || 'N/A'}</TableCell>
                         <TableCell className="font-medium">{app.applicationId}</TableCell>
                         <TableCell>
                           {app.submittedAt instanceof Timestamp 
@@ -659,7 +657,7 @@ function UserApplicationsList() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       You have not submitted any applications yet.
                     </TableCell>
                   </TableRow>
