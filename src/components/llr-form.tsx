@@ -129,8 +129,20 @@ export function LLRForm() {
     try {
       const applicationsCollection = collection(firestore, 'llr_applications');
       const snapshot = await getDocs(applicationsCollection);
-      const appCount = snapshot.size;
-      const newApplicationId = `DW-LLR-${String(appCount + 1).padStart(3, '0')}`;
+      
+      let maxId = 0;
+      snapshot.forEach(doc => {
+        const docId = doc.data().applicationId;
+        if (docId && docId.startsWith('DW-LLR-')) {
+          const numPart = parseInt(docId.replace('DW-LLR-', ''), 10);
+          if (!isNaN(numPart) && numPart > maxId) {
+            maxId = numPart;
+          }
+        }
+      });
+
+      const newIdNumber = maxId + 1;
+      const newApplicationId = `DW-LLR-${String(newIdNumber).padStart(3, '0')}`;
       
       const photoFile = values.photo && values.photo.length > 0 ? values.photo[0] : null;
       const signatureFile = values.signature && values.signature.length > 0 ? values.signature[0] : null;
